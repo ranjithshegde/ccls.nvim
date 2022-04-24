@@ -147,6 +147,8 @@ end
 --- equal to 'success', the root node is set and the tree view is updated
 --- accordingly, otherwise nothing happens.
 local function tree_set_root_cb(tree, object, status, tree_item)
+    print(status)
+    vim.pretty_print(tree_item)
     if status == "success" then
         tree.maxid = -1
         tree.root = node_new(tree, object, tree_item, {})
@@ -227,10 +229,13 @@ end
 local function tree_update(dict, ...)
     if not select(1, ...) then
         print "No select"
-        dict.provider.getChildren(function(object)
+
+        dict.provider.getChildren(function(status, object)
+            print "exec get children callback"
             dict.provider.getTreeItem(function(...)
-                tree_set_root_cb(object[0], ...)
-            end, object[0])
+                print "exec get tree callback"
+                tree_set_root_cb(dict, object[1], ...)
+            end, object[1])
         end)
     else
         local temp = select(2, ...)

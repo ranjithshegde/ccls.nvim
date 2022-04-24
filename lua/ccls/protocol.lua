@@ -130,6 +130,7 @@ end
 local function get_children(dict, callback, ...)
     if not select(1, ...) then
         callback("success", dict.root)
+        print "after getChildren exec"
         return
     end
     local data = select(2, ...)
@@ -199,12 +200,11 @@ end
 --- Produce the tree item representation for a given object.
 local function get_tree_item(dict, callback, data)
     print "Getting tree"
-    vim.pretty_print(dict)
-    local file = vim.uri_to_fname(data.location.uri)
-    local line = tonumber(data.location.range.start.line) + 1
-    local column = tonumber(data.location.range.start.character) + 1
+    local file = vim.uri_to_fname(data.uri)
+    local line = tonumber(data.range.start.line) + 1
+    local column = tonumber(data.range.start.character) + 1
     local tree_item = {
-        id = 0 + data.id,
+        id = data.id and 0 + data.id or 0,
         command = function()
             jump(file, line, column)
         end,
@@ -218,6 +218,7 @@ local function get_tree_item(dict, callback, data)
     end
     -- TODO verify table
     callback("success", tree_item)
+    print "After get tree callback"
 end
 
 --- Callback to create a tree view.
