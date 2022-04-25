@@ -1,10 +1,10 @@
-local callbacks = {}
-local call_id = 0
+_G.callbacks = {}
+_G.call_id = 0
 
 local function registerLSP(callback)
-    call_id = call_id + 1
-    callbacks[call_id] = callback
-    return call_id
+    _G.call_id = _G.call_id + 1
+    _G.callbacks[_G.call_id] = callback
+    return _G.call_id
 end
 
 local function jump(file, line, column)
@@ -35,15 +35,15 @@ local function nodeRequest(bufnr, method, params, handler)
             print "No result from CCLS`"
             return
         end
-        local keys = vim.tbl_keys(callbacks)
+        local keys = vim.tbl_keys(_G.callbacks)
         if vim.tbl_contains(keys, id) then
-            callbacks[id](result)
-            table.remove(callbacks, id)
+            _G.callbacks[id](result)
+            table.remove(_G.callbacks, id)
         end
     end
 
     if client then
-        client.request(method, params, lspHandler, bufnr)
+        client.request(method, params, lspHandler)
     else
         print "Ccls is not attached to this buffer"
     end
@@ -93,27 +93,24 @@ local function create_win_or_float(filetype, bufnr, method, params, handler)
     -- end)
 
     -- if ok then
-    -- if isNodeTree then
-    --     vim.api.nvim_buf_set_option(0, "filetype", "NodeTree")
-    --     vim.cmd "silent 0file"
-    --     vim.api.nvim_buf_set_option(0, "buftype", buftype)
-    --     if vim.fn.filereadable(temp) == 1 then
-    --         vim.fn.delete(temp)
-    --     end
-    -- end
+    if isNodeTree then
+        vim.api.nvim_buf_set_option(0, "filetype", "NodeTree")
+        vim.cmd "silent 0file"
+        vim.api.nvim_buf_set_option(0, "buftype", buftype)
+        if vim.fn.filereadable(temp) == 1 then
+            vim.fn.delete(temp)
+        end
+    end
     -- end
 end
 
 --- Recursively cache the children.
 local function add_children_to_cache(dict, data)
-    -- if not data then
-    --     data = dict
-    -- end
     if not vim.fn.has_key(data, "children") == 1 or #data.children < 1 then
         return
     end
 
-    dict.cachedChildren[data.id] = data.children
+    dict.cached_children[data.id] = data.children
     for _, child in pairs(data.children) do
         dict.add_children_to_cache(dict, child)
     end
@@ -130,17 +127,17 @@ end
 local function get_children(dict, callback, ...)
     if not select(1, ...) then
         callback("success", dict.root)
-        print "after getChildren exec"
+        -- print "after getChildren exec"
         return
     end
     local data = select(2, ...)
 
-    if vim.fn.has_key(data, "children") and #data.children > 0 then
+    if vim.fn.has_key(data, "children") == 1 and #data.children > 0 then
         callback("success", data.children)
         return
     end
 
-    if vim.fn.has_key(dict.cachec_children, data.id) and #data.children > 0 then
+    if vim.fn.has_key(dict.cachec_children, data.id) == 1 then
         callback("success", dict.cachec_children[data.id])
         return
     end
@@ -151,7 +148,12 @@ local function get_children(dict, callback, ...)
         levels = vim.g.ccls_levels,
     }
 
+    vim.pretty_print(params)
+
     params = vim.tbl_deep_extend("force", params, dict.extra_params)
+
+    vim.pretty_print(params)
+
     if vim.fn.has_key(data, "kind") then
         params["kind"] = data.kind
     end
@@ -167,22 +169,21 @@ end
 --- Produce the parent of a given object.
 -- TODO verify dict
 local function get_parent(dict, callback, data)
-    -- callback(dict, "failure")
-    callback "failure"
+    callback(dict, "failure")
+    -- callback "failure"
 end
 
 --- Get the collapsibleState for a node. The root is returned expanded on
 --- the first request only (to avoid issues with cyclic graphs).
 local function get_collapsible_state(dict, data)
     local result = "none"
-    -- if not data then
-    --     data = dict
-    -- end
     if data.numChildren > 0 then
-        result = dict.root.id
-        dict.root_state = "collapsed"
-    else
-        result = "collapsed"
+        if data.id == dict.root.id then
+            result = dict.root_state
+            dict.root_state = "collapsed"
+        else
+            result = "collapsed"
+        end
     end
     return result
 end
@@ -199,7 +200,7 @@ end
 
 --- Produce the tree item representation for a given object.
 local function get_tree_item(dict, callback, data)
-    print "Getting tree"
+    -- print "Getting tree"
     local file = vim.uri_to_fname(data.uri)
     local line = tonumber(data.range.start.line) + 1
     local column = tonumber(data.range.start.character) + 1
@@ -224,7 +225,6 @@ end
 --- Callback to create a tree view.
 -- TODO find best way to do table
 local function handle_tree(bufnr, filetype, method, extra_params, data)
-    print "Handling tree"
     if type(data) ~= "table" then
         print "No heirarchy for the object found"
         return
@@ -263,23 +263,23 @@ local function handle_tree(bufnr, filetype, method, extra_params, data)
         extra_params = extra_params,
     }
     provider.get_collapsible_state = function(...)
-        print "protocol collapsible"
+        -- print "protocol collapsible"
         get_collapsible_state(provider, ...)
     end
     provider.add_children_to_cache = function(...)
-        print "protocol children cache"
+        -- print "protocol children cache"
         add_children_to_cache(provider, ...)
     end
 
     provider.handle_children_data = function(...)
-        print "protocol children handle"
+        -- print "protocol children handle"
         handle_children_data(provider, ...)
     end
     provider.getChildren = function(...)
         get_children(provider, ...)
     end
     provider.getParent = function(...)
-        print "protocol parent get"
+        -- print "protocol parent get"
         get_parent(provider, ...)
     end
     provider.getTreeItem = function(...)
@@ -303,6 +303,8 @@ function protocol.request(method, config, heirarchy)
         },
         heirarchy = heirarchy,
     }
+    params = vim.tbl_extend("keep", params, config)
+
     if heirarchy then
         params.level = vim.g.ccls_levels or 3
 
@@ -312,7 +314,6 @@ function protocol.request(method, config, heirarchy)
         create_win_or_float(vim.api.nvim_buf_get_option(bufnr, "filetype"), bufnr, method, params, handler)
     else
         local name = method:gsub("%$ccls/", "")
-        params = vim.tbl_extend("keep", params, config)
         qfRequest(params, method, bufnr, name)
     end
 end
