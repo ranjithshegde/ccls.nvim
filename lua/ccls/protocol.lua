@@ -125,41 +125,41 @@ end
 --- Produce the list of children for an object given as optional argument,
 --- or the root of the tree when called with no optional argument.
 local function get_children(dict, callback, ...)
-    if not select(1, ...) then
+    print "Get children callback"
+    local args = { ... }
+    if #args < 1 then
         callback("success", dict.root)
-        -- print "after getChildren exec"
-        return
-    end
-    local data = select(2, ...)
-
-    if vim.fn.has_key(data, "children") == 1 and #data.children > 0 then
-        callback("success", data.children)
         return
     end
 
-    if vim.fn.has_key(dict.cachec_children, data.id) == 1 then
-        callback("success", dict.cachec_children[data.id])
+    -- " let l:printer = items(l:self.root)
+    -- " echo l:printer
+    -- echo type(l:self.root)
+
+    if vim.fn.has_key(args[1], "children") == 1 and #args[1].children > 0 then
+        callback("success", args[1].children)
+        return
+    end
+
+    if vim.fn.has_key(dict.cachec_children, args[1].id) == 1 then
+        callback("success", dict.cachec_children[args[1].id])
         return
     end
 
     local params = {
-        id = data.id,
-        heirarchy = true,
+        id = args[1].id,
+        hierarchy = true,
         levels = vim.g.ccls_levels,
     }
 
-    vim.pretty_print(params)
-
     params = vim.tbl_deep_extend("force", params, dict.extra_params)
 
-    vim.pretty_print(params)
-
-    if vim.fn.has_key(data, "kind") then
-        params["kind"] = data.kind
+    if vim.fn.has_key(args[1], "kind") then
+        params["kind"] = args[1].kind
     end
 
-    local handler = function(dat)
-        dict.handle_children_data(dict, callback, dat)
+    local handler = function(data)
+        dict.handle_children_data(dict, callback, data)
     end
     print "Expand node ..."
 
@@ -200,18 +200,23 @@ end
 
 --- Produce the tree item representation for a given object.
 local function get_tree_item(dict, callback, data)
-    -- print "Getting tree"
-    local file = vim.uri_to_fname(data.uri)
-    local line = tonumber(data.range.start.line) + 1
-    local column = tonumber(data.range.start.character) + 1
+    -- if data then
+    --     vim.pretty_print(data)
+    -- else
+    --     print "something fucked"
+    -- end
+    print "Getting tree"
+    local file = vim.uri_to_fname(data.location.uri)
+    local line = tonumber(data.location.range.start.line) + 1
+    local column = tonumber(data.location.range.start.character) + 1
     local tree_item = {
-        id = data.id and 0 + data.id or 0,
+        id = 0 + data.id,
         command = function()
             jump(file, line, column)
         end,
     }
     tree_item.collapsibleState = function()
-        get_collapsible_state(tree_item, data)
+        dict.get_collapsible_state(tree_item, data)
     end
     tree_item.label = function()
         -- TODO verify table
@@ -272,18 +277,27 @@ local function handle_tree(bufnr, filetype, method, extra_params, data)
     end
 
     provider.handle_children_data = function(...)
-        -- print "protocol children handle"
+        print "at get children lamda "
         handle_children_data(provider, ...)
     end
     provider.getChildren = function(...)
+        print "at get children lamda"
         get_children(provider, ...)
     end
     provider.getParent = function(...)
-        -- print "protocol parent get"
+        print "at get children lamda "
         get_parent(provider, ...)
     end
-    provider.getTreeItem = function(...)
-        get_tree_item(provider, ...)
+    provider.getTreeItem = function(callback, dat)
+        -- print "at get tree lamda"
+        -- local arg = { ... }
+        -- vim.pretty_print(arg)
+        -- if dat then
+        --     vim.pretty_print(dat)
+        -- else
+        --     print "more fucks"
+        -- end
+        get_tree_item(provider, callback, dat)
     end
 
     require("ccls.tree").newTree(provider, float_buf)
@@ -291,7 +305,7 @@ end
 
 local protocol = {}
 
-function protocol.request(method, config, heirarchy)
+function protocol.request(method, config, hierarchy)
     local bufnr = vim.fn.bufnr "%"
     local params = {
         textDocument = {
@@ -301,12 +315,12 @@ function protocol.request(method, config, heirarchy)
             line = vim.fn.getcurpos()[2] - 1,
             character = vim.fn.getcurpos()[3] - 1,
         },
-        heirarchy = heirarchy,
+        hierarchy = hierarchy,
     }
     params = vim.tbl_extend("keep", params, config)
 
-    if heirarchy then
-        params.level = vim.g.ccls_levels or 3
+    if hierarchy then
+        params.levels = vim.g.ccls_levels or 3
 
         local handler = function(...)
             handle_tree(bufnr, vim.api.nvim_buf_get_option(bufnr, "filetype"), method, config, ...)

@@ -150,9 +150,9 @@ end
 --- accordingly, otherwise nothing happens.
 function Tree.tree_set_root_cb(tree, object, status, tree_item)
     if status == "success" then
-        tree.maxid = -1
+        tree.maxid = 0
         tree.root = Tree.node_new(tree, object, tree_item, {})
-        -- print "At tree callback root"
+        print "At tree callback root"
         Tree.tree_render(tree)
     end
 end
@@ -226,19 +226,33 @@ end
 --- update the whole tree. If called with an {object} as argument, update
 --- all the subtrees of nodes corresponding to {object}.
 function Tree.tree_update(dict, ...)
-    if not select(1, ...) then
-        dict.provider.getChildren(function(status, object)
+    local args = { ... }
+
+    if #args < 1 then
+        dict.provider.getChildren(function(status, obj)
             dict.provider.getTreeItem(function(...)
-                Tree.tree_set_root_cb(dict, object[1], ...)
-            end, object[1])
+                Tree.tree_set_root_cb(dict, obj[1], ...)
+            end, obj[1])
         end)
     else
-        local temp = select(2, ...)
         dict.provider.getTreeItem(function(...)
-            Tree.node_update { dict, temp, ... }
-        end, temp)
+            Tree.node_update(dict, args[1], ...)
+        end, args[1])
     end
 end
+
+print "at getChildren Tree lamda"
+-- print "at getTreeItem Tree lamda"
+-- local arg = { ... }
+-- vim.pretty_print(arg)
+
+-- function! s:tree_update(...) dict abort
+--     if a:0 < 1
+--         call l:self.provider.getChildren({ status, obj -> l:self.provider.getTreeItem( function('s:tree_set_root_cb', [l:self, obj[0]]), obj[0]) })
+--     else
+--         call l:self.provider.getTreeItem(function('s:node_update', [l:self, a:1]), a:1)
+--     endif
+-- endfunction
 
 --- Destroy the tree view. Wipe out the buffer containing it.
 function Tree.tree_wipe(dict)
