@@ -241,7 +241,7 @@ function Tree.tree_update(dict, ...)
     end
 end
 
-print "at getChildren Tree lamda"
+-- print "at getChildren Tree lamda"
 -- print "at getTreeItem Tree lamda"
 -- local arg = { ... }
 -- vim.pretty_print(arg)
