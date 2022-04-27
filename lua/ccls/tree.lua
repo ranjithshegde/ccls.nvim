@@ -1,11 +1,14 @@
 local Tree = {}
+
+local nodeTree = {}
+local new_node = {}
 -- Callback to retrieve the tree item representation of an object
 function Tree.node_get_tree_item_cb(node, object, status, tree_item)
     print "at get tree callback"
     if status == "success" then
-        local new_node = Tree.node_new(node.tree, object, tree_item, node)
-        table.insert(node.children, new_node)
-        Tree.tree_render(new_node.tree)
+        local newnode = Tree.node_new(node.tree, object, tree_item, node)
+        table.insert(node.children, newnode)
+        Tree.tree_render(newnode.tree)
     end
 end
 
@@ -15,7 +18,7 @@ function Tree.node_get_children_cb(node, status, childObjectList)
         local callback = function(...)
             Tree.node_get_tree_item_cb(node, object, ...)
         end
-        node.tree.provider.getTreeItem(callback, object)
+        node.tree.provider:getTreeItem(callback, object)
     end
 end
 
@@ -55,19 +58,22 @@ end
 -- Return the depth level of the node in the tree. The level is defined
 -- recursively: the root has depth 0, and each node has depth equal to the depth
 -- of its parent increased by 1.
+-- function Tree.node_level(dict)
+--     local level
+--     if vim.tbl_isempty(dict.parent) then
+--         level = 0
+--         print(level)
+--         return level
+--     end
+--     level = 1 + dict.parent.level()
+--     print(level)
+--     return level
+-- end
 function Tree.node_level(dict)
     if vim.tbl_isempty(dict.parent) then
         return 0
     end
-    return 1 + dict.parent.level()
-end
-
-local function tablify(s, delimiter)
-    local result = {}
-    for match in (s .. delimiter):gmatch("(.-)" .. delimiter) do
-        table.insert(result, match)
-    end
-    return result
+    return 1 + dict.parent:level()
 end
 
 --- Return the string representation of the node. The {level} argument represents
@@ -81,21 +87,24 @@ function Tree.node_render(dict, level)
         mark = dict.collapsed and "▸ " or "▾ "
     end
 
-    local label = tablify(dict.tree_item.label, "\n")
+    local label = vim.split(dict.tree_item.label, "\n")
 
-    dict.tree.index = vim.tbl_deep_extend(
-        "force",
-        dict.tree.index,
-        vim.fn.map(vim.fn.range(#label), dict)
-        -- vim.tbl_map(function() vim.fn.range(#label) end, dict)
-    )
+    -- dict.tree.index = vim.tbl_deep_extend(
+    --     "force",
+    --     dict.tree.index,
+    --     vim.tbl_map(function(...)
+    --         dict.render(dict.tree, ...)
+    --     end, vim.fn.range(#label))
+    -- )
+
+    dict.tree.index = vim.tbl_deep_extend("force", dict.tree.index, vim.tbl_map(vim.fn.range, vim.fn.range(#label)))
 
     local repr = indent
         .. mark
-        .. label[0]
-        .. table.concat(vim.tbl_map(function(l)
+        .. label[1]
+        .. table.concat(vim.fn.map(label, function(_, l)
             return "\n" .. indent .. " " .. l
-        end, label[1]))
+        end))
 
     local lines = repr
 
@@ -105,10 +114,10 @@ function Tree.node_render(dict, level)
             local callback = function(...)
                 Tree.node_get_children_cb(dict, ...)
             end
-            dict.tree.provider.getChildren(callback, dict.object)
+            dict.tree.provider:getChildren(callback, dict.object)
         end
         for _, child in pairs(dict.children) do
-            table.insert(lines, child.render(level + 1))
+            table.insert(lines, child.render(_, level + 1))
         end
     end
     return table.concat(lines, "\n")
@@ -121,33 +130,32 @@ end
 -- is true the node will be rendered as collapsed in the view. If {lazy_open} is
 -- true, the children of the node will be fetched when the node is expanded by
 -- the user.
-function Tree.node_new(tree, object, tree_item, parent)
-    -- print "Node Render"
-    tree.maxid = tree.maxid + 1
-    local temp = {
-        id = tree.maxid,
-        tree = tree,
-        object = object,
-        tree_item = tree_item,
-        parent = parent,
-        collapsed = tree_item.collapsibleState == "collapsed",
-        lazy_open = tree_item.collapsibleState ~= "none",
-        children = {},
-    }
 
-    temp.level = function()
-        Tree.node_level(temp)
+function Tree.node_new(tree, object, tree_item, parent)
+    tree.maxid = tree.maxid + 1
+
+    new_node.id = tree.maxid
+    new_node.tree = tree
+    new_node.object = object
+    new_node.tree_item = tree_item
+    new_node.parent = parent
+    new_node.collapsed = tree_item.collapsibleState == "collapsed"
+    new_node.lazy_open = tree_item.collapsibleState ~= "none"
+    new_node.children = {}
+
+    function new_node:level()
+        Tree.node_level(self)
     end
-    temp.exec = function()
-        Tree.node_exec(temp)
+    function new_node:exec()
+        Tree.node_exec(self)
     end
-    temp.set_collapsed = function(...)
-        Tree.node_set_collapsed(temp, ...)
+    function new_node:set_collapsed(...)
+        Tree.node_set_collapsed(self, ...)
     end
-    temp.render = function(...)
-        Tree.node_render(temp, ...)
+    function new_node:render(...)
+        Tree.node_render(self, ...)
     end
-    return temp
+    return new_node
 end
 
 --- Callback that sets the root node of a given {tree}, creating a new node
@@ -177,15 +185,15 @@ end
 --- Expand or collapse the node under cursor, and render the tree.
 --- Please refer to *s:node_set_collapsed()* for details about the
 --- arguments and behaviour.
-function Tree.tree_set_collapsed_under_cursor(dict, collapsed)
-    local node = Tree.get_node_under_cursor(dict)
+function Tree.tree_set_collapsed_under_cursor(self, collapsed)
+    local node = Tree.get_node_under_cursor(self)
     node.set_collapsed(collapsed)
-    Tree.tree_render(dict)
+    Tree.tree_render(self)
 end
 
 --- Run the action associated to the node currently under the cursor.
-function Tree.tree_exec_node_under_cursor(dict)
-    Tree.get_node_under_cursor(dict).exec()
+function Tree.tree_exec_node_under_cursor(self)
+    Tree.get_node_under_cursor(self).exec()
 end
 
 --- Render the {tree}. This will replace the content of the buffer with the
@@ -198,7 +206,7 @@ function Tree.tree_render(tree)
 
     local cursor = vim.fn.getpos "."
     tree.index = { -1 }
-    local text = tree.root.render(0)
+    local text = tree.root.render(tree.root, 0)
 
     vim.opt_local.modifiable = true
     vim.api.nvim_command "silent 1,$delete _"
@@ -245,13 +253,13 @@ end
 --- Update the view if nodes have changed. If called with no arguments,
 --- update the whole tree. If called with an {object} as argument, update
 --- all the subtrees of nodes corresponding to {object}.
-function Tree.tree_update(dict, ...)
+function Tree.tree_update(self, ...)
     local args = { ... }
 
     if #args < 1 then
-        dict.provider.getChildren(function(status, obj)
-            dict.provider.getTreeItem(function(...)
-                Tree.tree_set_root_cb(dict, obj, ...)
+        self.provider:getChildren(function(status, obj)
+            self.provider:getTreeItem(function(...)
+                Tree.tree_set_root_cb(self, obj, ...)
             end, obj)
         end)
 
@@ -261,36 +269,36 @@ function Tree.tree_update(dict, ...)
         --     end, get_nth_element(obj, 1)[1])
         -- end)
     else
-        dict.provider.getTreeItem(function(...)
-            Tree.node_update(dict, args[1], ...)
+        self.provider:getTreeItem(function(...)
+            Tree.node_update(self, args[1], ...)
         end, args[1])
     end
 end
 
 --- Destroy the tree view. Wipe out the buffer containing it.
-function Tree.tree_wipe(dict)
-    vim.api.nvim_buf_delete(dict.bunfr or 0, {})
+function Tree.tree_wipe(self)
+    vim.api.nvim_buf_delete(self.bunfr or 0, {})
 end
 
 function Tree.keys()
     vim.keymap.set("n", "<Plug>(nodetree-toggle-node)", function()
-        Tree.nodeTree.set_collapsed_under_cursor(-1)
+        nodeTree.set_collapsed_under_cursor(-1)
     end, { buffer = true, silent = true })
 
     vim.keymap.set("n", "<Plug>(nodetree-open-node)", function()
-        Tree.nodeTree.set_collapsed_under_cursor(false)
+        nodeTree.set_collapsed_under_cursor(false)
     end, { buffer = true, silent = true })
 
     vim.keymap.set("n", "<Plug>(nodetree-close-node)", function()
-        Tree.nodeTree.set_collapsed_under_cursor(true)
+        nodeTree.set_collapsed_under_cursor(true)
     end, { buffer = true, silent = true })
 
     vim.keymap.set("n", "<Plug>(nodetree-execute-node)", function()
-        Tree.nodeTree.exec_node_under_cursor()
+        nodeTree:exec_node_under_cursor()
     end, { buffer = true, silent = true })
 
     vim.keymap.set("n", "<Plug>(nodetree-wipe-tree)", function()
-        Tree.nodeTree.wipe()
+        nodeTree:wipe()
     end, { buffer = true, silent = true })
 end
 
@@ -302,23 +310,22 @@ end
 --- known internal identifier of the nodes. The {index} is a list that
 --- maps line numbers to nodes.
 function Tree.newTree(provider, bufnr)
-    Tree.nodeTree = {
-        maxid = -1,
-        root = {},
-        index = {},
-        provider = provider,
-    }
-    Tree.nodeTree.set_collapsed_under_cursor = function(...)
-        Tree.tree_set_collapsed_under_cursor(Tree.nodeTree, ...)
+    nodeTree.maxid = -1
+    nodeTree.root = {}
+    nodeTree.index = {}
+    nodeTree.provider = provider
+
+    function nodeTree:set_collapsed_under_cursor(...)
+        Tree.tree_set_collapsed_under_cursor(self, ...)
     end
-    Tree.nodeTree.exec_node_under_cursor = function()
-        Tree.tree_exec_node_under_cursor(Tree.nodeTree)
+    function nodeTree:exec_node_under_cursor()
+        Tree.tree_exec_node_under_cursor(self)
     end
-    Tree.nodeTree.update = function(...)
-        Tree.tree_update(Tree.nodeTree, ...)
+    function nodeTree:update(...)
+        Tree.tree_update(self, ...)
     end
-    Tree.nodeTree.wipe = function()
-        Tree.tree_wipe(Tree.nodeTree)
+    function nodeTree:wipe()
+        Tree.tree_wipe(self)
     end
 
     vim.api.nvim_create_autocmd("BufEnter", {
@@ -326,13 +333,13 @@ function Tree.newTree(provider, bufnr)
         group = "NodeTree",
         callback = function()
             print "Aucmd"
-            Tree.tree_render(Tree.nodeTree)
+            Tree.tree_render(nodeTree)
         end,
     })
     Tree.keys()
 
     vim.opt_local.filetype = "NodeTree"
-    Tree.nodeTree.update()
+    nodeTree:update()
 end
 
 return Tree

@@ -1,6 +1,6 @@
 local protocol = {
-    provider = {},
     tree_item = {},
+    provider = {},
 }
 
 local function jump(file, line, column)
@@ -68,16 +68,15 @@ local function create_win_or_float(filetype, bufnr, method, params, handler)
     local isNodeTree = vim.api.nvim_buf_get_option(bufnr, "filetype") == "NodeTree"
 
     -- local ok, _ = pcall(function()
-
-    if isNodeTree then
-        temp = vim.fn.tempname()
-        vim.api.nvim_buf_set_option(0, "buftype", "")
-        vim.api.nvim_buf_set_option(0, "filetype", filetype)
-        vim.cmd("file " .. temp)
-    end
-    nodeRequest(bufnr, method, params, handler)
-
-    -- end)
+    pcall(function()
+        if isNodeTree then
+            temp = vim.fn.tempname()
+            vim.api.nvim_buf_set_option(0, "buftype", "")
+            vim.api.nvim_buf_set_option(0, "filetype", filetype)
+            vim.cmd("file " .. temp)
+        end
+        nodeRequest(bufnr, method, params, handler)
+    end)
 
     -- if ok then
     if isNodeTree then
@@ -92,30 +91,30 @@ local function create_win_or_float(filetype, bufnr, method, params, handler)
 end
 
 --- Recursively cache the children.
-local function add_children_to_cache(data)
+local function add_children_to_cache(dict, data)
     if not vim.fn.has_key(data, "children") == 1 or #data.children < 1 then
         return
     end
 
-    protocol.provider.cached_children[data.id] = data.children
+    dict.cachedChildren[data.id] = data.children
     for _, child in pairs(data.children) do
-        protocol.provider.add_children_to_cache(child)
+        dict.add_children_to_cache(dict, child)
     end
 end
 
 --- Handle incominc children data.
-local function handle_children_data(callback, data)
-    protocol.provider.add_children_to_cache(data)
+local function handle_children_data(dict, callback, data)
+    dict.add_children_to_cache(dict, data)
     callback("success", data.children)
 end
 
 --- Produce the list of children for an object given as optional argument,
 --- or the root of the tree when called with no optional argument.
-local function get_children(callback, ...)
+local function get_children(dict, callback, ...)
     print "Get children callback"
     local args = { ... }
     if #args < 1 then
-        callback("success", protocol.provider.root)
+        callback("success", dict.root)
         return
     end
 
@@ -124,9 +123,11 @@ local function get_children(callback, ...)
         return
     end
 
-    if vim.fn.has_key(protocol.provider.cachec_children, args[1].id) == 1 then
-        callback("success", protocol.provider.cachec_children[args[1].id])
-        return
+    if not vim.tbl_isempty(dict.cached_children) then
+        if vim.fn.has_key(dict.cached_children, args[1].id) == 1 then
+            callback("success", dict.cached_children[args[1].id])
+            return
+        end
     end
 
     local params = {
@@ -135,37 +136,35 @@ local function get_children(callback, ...)
         levels = vim.g.ccls_levels,
     }
 
-    params = vim.tbl_deep_extend("force", params, protocol.provider.extra_params)
+    params = vim.tbl_deep_extend("force", params, dict.extra_params)
 
     if vim.fn.has_key(args[1], "kind") then
         params["kind"] = args[1].kind
     end
 
     local handler = function(data)
-        protocol.provider.handle_children_data(callback, data)
+        dict.handle_children_data(dict, callback, data)
     end
     print "Expand node ..."
 
-    create_win_or_float(protocol.provider.filetype, protocol.provider.bufnr, protocol.provider.method, params, handler)
+    create_win_or_float(dict.filetype, dict.bufnr, dict.method, params, handler)
 end
 
 --- Produce the parent of a given object.
 -- TODO verify dict
-local function get_parent(callback, data)
+local function get_parent(dict, callback, data)
     callback "failure"
 end
 
 --- Get the collapsibleState for a node. The root is returned expanded on
 --- the first request only (to avoid issues with cyclic graphs).
-local function get_collapsible_state(data)
+local function get_collapsible_state(dict, data)
     local result = "none"
     if data.numChildren > 0 then
-        if data.id == protocol.tree_item.root.id then
-            result = protocol.tree_item.root_state
-            protocol.tree_item.root_state = "collapsed"
-        else
-            result = "collapsed"
-        end
+        result = dict.root.id
+        dict.root_state = "collapsed"
+    else
+        result = "collapsed"
     end
     return result
 end
@@ -180,23 +179,21 @@ local function get_label(data)
 end
 
 --- Produce the tree item representation for a given object.
-local function get_tree_item(callback, data)
+local function get_tree_item(dict, callback, data)
     print "Getting tree"
     local file = vim.uri_to_fname(data.location.uri)
     local line = tonumber(data.location.range.start.line) + 1
     local column = tonumber(data.location.range.start.character) + 1
-    local tree_item = {
-        id = 0 + data.id,
-        command = function()
-            jump(file, line, column)
-        end,
-    }
-    tree_item.collapsibleState = function()
-        protocol.provider.get_collapsible_state(data)
+
+    local tree_item = {}
+    tree_item.id = data.id ~= "" and 0 + data.id or 0
+    tree_item.command = function()
+        jump(file, line, column)
     end
+
+    tree_item.collapsibleState = get_collapsible_state(tree_item, data)
     tree_item.label = get_label(data)
-    -- TODO verify table
-    protocol.tree_item = tree_item
+
     callback("success", tree_item)
     print "After get tree callback"
 end
@@ -232,32 +229,40 @@ local function handle_tree(bufnr, filetype, method, extra_params, data)
         end,
     })
 
-    local provider = {
-        root = data,
-        root_state = "expanded",
-        cached_children = {},
-        method = method,
-        filetype = filetype,
-        bufnr = bufnr,
-        extra_params = extra_params,
-    }
-    provider.get_collapsible_state = get_collapsible_state
-    provider.add_children_to_cache = add_children_to_cache
-    provider.handle_children_data = handle_children_data
-    provider.getChildren = get_children
-    provider.getParent = get_parent
-    provider.getTreeItem = get_tree_item
+    local provider = {}
 
-    protocol.provider = provider
+    provider.root = data
+    provider.root_state = "expanded"
+    provider.cached_children = {}
+    provider.method = method
+    provider.filetype = filetype
+    provider.bufnr = bufnr
+    provider.extra_params = extra_params
 
-    -- print "at get tree lamda"
-    -- local arg = { ... }
-    -- vim.pretty_print(arg)
-    -- if dat then
-    --     vim.pretty_print(dat)
-    -- else
-    --     print "more fucks"
-    -- end
+    function provider:get_collapsible_state(...)
+        -- print "protocol collapsible"
+        get_collapsible_state(self, ...)
+    end
+    function provider:add_children_to_cache(...)
+        -- print "protocol children cache"
+        add_children_to_cache(self, ...)
+    end
+
+    function provider:handle_children_data(...)
+        -- print "protocol children handle"
+        handle_children_data(self, ...)
+    end
+    function provider:getChildren(...)
+        get_children(self, ...)
+    end
+    function provider:getParent(...)
+        -- print "protocol parent get"
+        get_parent(self, ...)
+    end
+    function provider:getTreeItem(...)
+        get_tree_item(self, ...)
+    end
+
     require("ccls.tree").newTree(provider, float_buf)
 end
 
