@@ -44,7 +44,7 @@ local function qfRequest(params, method, bufnr, name)
     end
 end
 
-function protocol.create_win_or_float(filetype, bufnr, method, params, handler)
+local function create_win_or_float(filetype, bufnr, method, params, handler)
     print "Creating window"
     vim.api.nvim_create_augroup("NodeTree", { clear = true })
     local buftype = vim.api.nvim_buf_get_option(bufnr, "buftype")
@@ -74,6 +74,48 @@ function protocol.create_win_or_float(filetype, bufnr, method, params, handler)
     -- end
 end
 
+--- Callback to create a tree view.
+-- TODO find best way to do table
+local function handle_tree(bufnr, filetype, method, extra_params, data)
+    if type(data) ~= "table" then
+        print "No heirarchy for the object under the cursor"
+    end
+
+    local au = vim.api.nvim_create_augroup("ccls_float", { clear = true })
+
+    -- TODO add viewport
+    local buffer_options = {
+        style = "minimal",
+        relative = "cursor",
+        width = vim.g.ccls_float_width or 50,
+        height = vim.g.ccls_float_height or 20,
+        row = 0,
+        col = 0,
+        border = "shadow",
+    }
+    local float_id = vim.api.nvim_open_win(vim.api.nvim_create_buf(false, true), 0, buffer_options)
+    local float_buf = vim.api.nvim_win_get_buf(float_id)
+    vim.fn.win_gotoid(float_id)
+
+    vim.api.nvim_create_autocmd("WinLeave", {
+        buffer = float_buf,
+        group = au,
+        callback = function()
+            vim.api.nvim_win_close(float_id, true)
+        end,
+    })
+
+    local p = require("ccls.provider"):new {
+        root = data,
+        method = method,
+        filetype = filetype,
+        bufnr = bufnr,
+        extra_params = extra_params,
+    }
+
+    require("ccls.tree").newTree(p, float_buf)
+end
+
 function protocol.request(method, config, hierarchy)
     local bufnr = vim.fn.bufnr "%"
     local params = {
@@ -92,15 +134,9 @@ function protocol.request(method, config, hierarchy)
         params.levels = vim.g.ccls_levels or 3
 
         local handler = function(...)
-            require("ccls.provider").handle_tree(
-                bufnr,
-                vim.api.nvim_buf_get_option(bufnr, "filetype"),
-                method,
-                config,
-                ...
-            )
+            handle_tree(bufnr, vim.api.nvim_buf_get_option(bufnr, "filetype"), method, config, ...)
         end
-        protocol.create_win_or_float(vim.api.nvim_buf_get_option(bufnr, "filetype"), bufnr, method, params, handler)
+        create_win_or_float(vim.api.nvim_buf_get_option(bufnr, "filetype"), bufnr, method, params, handler)
     else
         local name = method:gsub("%$ccls/", "")
         qfRequest(params, method, bufnr, name)

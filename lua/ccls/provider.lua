@@ -132,46 +132,4 @@ function provider:getTreeItem(callback, data)
     callback("success", tree_item)
 end
 
---- Callback to create a tree view.
--- TODO find best way to do table
-function provider.handle_tree(bufnr, filetype, method, extra_params, data)
-    if type(data) ~= "table" then
-        print "No heirarchy for the object under the cursor"
-    end
-
-    local au = vim.api.nvim_create_augroup("ccls_float", { clear = true })
-
-    -- TODO add viewport
-    local buffer_options = {
-        style = "minimal",
-        relative = "cursor",
-        width = vim.g.ccls_float_width or 50,
-        height = vim.g.ccls_float_height or 20,
-        row = 0,
-        col = 0,
-        border = "shadow",
-    }
-    local float_id = vim.api.nvim_open_win(vim.api.nvim_create_buf(false, true), 0, buffer_options)
-    local float_buf = vim.api.nvim_win_get_buf(float_id)
-    vim.fn.win_gotoid(float_id)
-
-    vim.api.nvim_create_autocmd("WinLeave", {
-        buffer = float_buf,
-        group = au,
-        callback = function()
-            vim.api.nvim_win_close(float_id, true)
-        end,
-    })
-
-    local p = provider:new {
-        root = data,
-        method = method,
-        filetype = filetype,
-        bufnr = bufnr,
-        extra_params = extra_params,
-    }
-
-    require("ccls.tree").newTree(p, float_buf)
-end
-
 return provider
