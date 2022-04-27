@@ -1,15 +1,7 @@
 local protocol = {
     provider = {},
     tree_item = {},
-    callbacks = {},
-    call_id = 0,
 }
-
-local function registerLSP(callback)
-    protocol.call_id = protocol.call_id + 1
-    protocol.callbacks[protocol.call_id] = callback
-    return protocol.call_id
-end
 
 local function jump(file, line, column)
     local nodeTree_bufno = vim.fn.bufnr "%"
@@ -29,21 +21,12 @@ local function nodeRequest(bufnr, method, params, handler)
     bufnr = util.validate_bufnr(bufnr)
     local client = util.get_active_client_by_name(bufnr, "ccls")
 
-    local callback = function(data)
-        handler(data)
-    end
-    local id = registerLSP(callback)
-
     local lspHandler = function(err, result, _, _)
         if err then
             print "No result from CCLS`"
             return
         end
-        local keys = vim.tbl_keys(protocol.callbacks)
-        if vim.tbl_contains(keys, id) then
-            protocol.callbacks[id](result)
-            table.remove(protocol.callbacks, id)
-        end
+        handler(result)
     end
 
     if client then
@@ -136,10 +119,6 @@ local function get_children(callback, ...)
         return
     end
 
-    -- " let l:printer = items(l:self.root)
-    -- " echo l:printer
-    -- echo type(l:self.root)
-
     if vim.fn.has_key(args[1], "children") == 1 and #args[1].children > 0 then
         callback("success", args[1].children)
         return
@@ -192,9 +171,8 @@ local function get_collapsible_state(data)
 end
 
 --- Get the label for a given node.
--- TODO verify dict
 local function get_label(data)
-    if vim.fn.has_key(data, "fieldName") == 1 and #data.fieldName then
+    if vim.fn.has_key(data, "fieldName") == 1 and #data.fieldName >= 1 then
         return data.fieldName
     else
         return data.name
@@ -216,10 +194,7 @@ local function get_tree_item(callback, data)
     tree_item.collapsibleState = function()
         protocol.provider.get_collapsible_state(data)
     end
-    -- TODO verify table
-    tree_item.label = function()
-        get_label(data)
-    end
+    tree_item.label = get_label(data)
     -- TODO verify table
     protocol.tree_item = tree_item
     callback("success", tree_item)

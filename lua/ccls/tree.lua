@@ -1,6 +1,7 @@
 local Tree = {}
 -- Callback to retrieve the tree item representation of an object
 function Tree.node_get_tree_item_cb(node, object, status, tree_item)
+    print "at get tree callback"
     if status == "success" then
         local new_node = Tree.node_new(node.tree, object, tree_item, node)
         table.insert(node.children, new_node)
@@ -80,9 +81,14 @@ function Tree.node_render(dict, level)
         mark = dict.collapsed and "▸ " or "▾ "
     end
 
-    local tempLabel = dict.tree_item.label()
-    local label = tablify(dict.tree_item.label(), "\n")
-    dict.tree.index = vim.tbl_deep_extend("force", dict.tree.index, vim.tbl_map(dict, vim.fn.range(#label)))
+    local label = tablify(dict.tree_item.label, "\n")
+
+    dict.tree.index = vim.tbl_deep_extend(
+        "force",
+        dict.tree.index,
+        vim.fn.map(vim.fn.range(#label), dict)
+        -- vim.tbl_map(function() vim.fn.range(#label) end, dict)
+    )
 
     local repr = indent
         .. mark
@@ -150,7 +156,7 @@ end
 --- accordingly, otherwise nothing happens.
 function Tree.tree_set_root_cb(tree, object, status, tree_item)
     if status == "success" then
-        tree.maxid = 0
+        tree.maxid = -1
         tree.root = Tree.node_new(tree, object, tree_item, {})
         print "At tree callback root"
         Tree.tree_render(tree)
@@ -192,7 +198,6 @@ function Tree.tree_render(tree)
 
     local cursor = vim.fn.getpos "."
     tree.index = { -1 }
-    -- tree.index = { 0 }
     local text = tree.root.render(0)
 
     vim.opt_local.modifiable = true
@@ -222,6 +227,21 @@ function Tree.node_update(tree, object, status, tree_item)
     Tree.tree_render(tree)
 end
 
+local function get_nth_element(data, index)
+    local i = 1
+    for _, value in pairs(data) do
+        if i == #data then
+            print "Table does not have the value"
+            return data
+        elseif i == index then
+            -- vim.pretty_print(value)
+            return value
+        else
+            i = i + 1
+        end
+    end
+end
+
 --- Update the view if nodes have changed. If called with no arguments,
 --- update the whole tree. If called with an {object} as argument, update
 --- all the subtrees of nodes corresponding to {object}.
@@ -231,28 +251,21 @@ function Tree.tree_update(dict, ...)
     if #args < 1 then
         dict.provider.getChildren(function(status, obj)
             dict.provider.getTreeItem(function(...)
-                Tree.tree_set_root_cb(dict, obj[1], ...)
-            end, obj[1])
+                Tree.tree_set_root_cb(dict, obj, ...)
+            end, obj)
         end)
+
+        -- dict.provider.getChildren(function(status, obj)
+        --     dict.provider.getTreeItem(function(...)
+        --         Tree.tree_set_root_cb(dict, get_nth_element(obj, 1)[1], ...)
+        --     end, get_nth_element(obj, 1)[1])
+        -- end)
     else
         dict.provider.getTreeItem(function(...)
             Tree.node_update(dict, args[1], ...)
         end, args[1])
     end
 end
-
--- print "at getChildren Tree lamda"
--- print "at getTreeItem Tree lamda"
--- local arg = { ... }
--- vim.pretty_print(arg)
-
--- function! s:tree_update(...) dict abort
---     if a:0 < 1
---         call l:self.provider.getChildren({ status, obj -> l:self.provider.getTreeItem( function('s:tree_set_root_cb', [l:self, obj[0]]), obj[0]) })
---     else
---         call l:self.provider.getTreeItem(function('s:node_update', [l:self, a:1]), a:1)
---     endif
--- endfunction
 
 --- Destroy the tree view. Wipe out the buffer containing it.
 function Tree.tree_wipe(dict)
