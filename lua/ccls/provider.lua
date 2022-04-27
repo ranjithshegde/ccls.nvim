@@ -118,8 +118,6 @@ function provider:getTreeItem(callback, data)
     local line = tonumber(data.location.range.start.line) + 1
     local column = tonumber(data.location.range.start.character) + 1
 
-    -- local tree_item = require("treeItem").new(data, file, line, column)
-
     local tree_item = {
         id = data.id,
         command = function()

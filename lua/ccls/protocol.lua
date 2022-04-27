@@ -113,7 +113,7 @@ local function handle_tree(bufnr, filetype, method, extra_params, data)
         extra_params = extra_params,
     }
 
-    require("ccls.tree").newTree(p, float_buf)
+    require("ccls.tree").init(p, float_buf)
 end
 
 function protocol.request(method, config, hierarchy)
