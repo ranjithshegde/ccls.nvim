@@ -1,20 +1,4 @@
-local protocol = {
-    tree_item = {},
-    provider = {},
-}
-
-local function jump(file, line, column)
-    local nodeTree_bufno = vim.fn.bufnr "%"
-    vim.cmd 'silent execute "normal! <C-W><C-P>'
-    if vim.g.ccls_close_on_jump then
-        vim.api.nvim_buf_delete(nodeTree_bufno, { force = true })
-    end
-    local buffer = vim.fn.bufnr(file)
-    local command = buffer and "b " .. buffer or "edit " .. file
-    -- vim.cmd(command .. " | call cursor(" .. line .. "," .. column .. ")")
-    vim.cmd(command)
-    vim.fn.cursor { line, column }
-end
+local protocol = {}
 
 local function nodeRequest(bufnr, method, params, handler)
     local util = require "lspconfig.util"
@@ -60,7 +44,7 @@ local function qfRequest(params, method, bufnr, name)
     end
 end
 
-local function create_win_or_float(filetype, bufnr, method, params, handler)
+function protocol.create_win_or_float(filetype, bufnr, method, params, handler)
     print "Creating window"
     vim.api.nvim_create_augroup("NodeTree", { clear = true })
     local buftype = vim.api.nvim_buf_get_option(bufnr, "buftype")
@@ -90,15 +74,6 @@ local function create_win_or_float(filetype, bufnr, method, params, handler)
     -- end
 end
 
---- Get the label for a given node.
-local function get_label(data)
-    if vim.fn.has_key(data, "fieldName") == 1 and #data.fieldName >= 1 then
-        return data.fieldName
-    else
-        return data.name
-    end
-end
-
 function protocol.request(method, config, hierarchy)
     local bufnr = vim.fn.bufnr "%"
     local params = {
@@ -117,9 +92,15 @@ function protocol.request(method, config, hierarchy)
         params.levels = vim.g.ccls_levels or 3
 
         local handler = function(...)
-            require("provider").handle_tree(bufnr, vim.api.nvim_buf_get_option(bufnr, "filetype"), method, config, ...)
+            require("ccls.provider").handle_tree(
+                bufnr,
+                vim.api.nvim_buf_get_option(bufnr, "filetype"),
+                method,
+                config,
+                ...
+            )
         end
-        create_win_or_float(vim.api.nvim_buf_get_option(bufnr, "filetype"), bufnr, method, params, handler)
+        protocol.create_win_or_float(vim.api.nvim_buf_get_option(bufnr, "filetype"), bufnr, method, params, handler)
     else
         local name = method:gsub("%$ccls/", "")
         qfRequest(params, method, bufnr, name)

@@ -14,6 +14,28 @@ function provider:new(p)
     return p
 end
 
+--- Get the label for a given node.
+local function get_label(data)
+    if vim.fn.has_key(data, "fieldName") == 1 and #data.fieldName >= 1 then
+        return data.fieldName
+    else
+        return data.name
+    end
+end
+
+local function jump(file, line, column)
+    local nodeTree_bufno = vim.fn.bufnr "%"
+    vim.cmd 'silent execute "normal! <C-W><C-P>'
+    if vim.g.ccls_close_on_jump then
+        vim.api.nvim_buf_delete(nodeTree_bufno, { force = true })
+    end
+    local buffer = vim.fn.bufnr(file)
+    local command = buffer and "b " .. buffer or "edit " .. file
+    -- vim.cmd(command .. " | call cursor(" .. line .. "," .. column .. ")")
+    vim.cmd(command)
+    vim.fn.cursor { line, column }
+end
+
 --- Get the collapsibleState for a node. The root is returned expanded on
 --- the first request only (to avoid issues with cyclic graphs).
 function provider:get_collapsible_state(data)
@@ -62,9 +84,11 @@ function provider:getChildren(callback, ...)
         return
     end
 
-    if vim.fn.has_key(self.cached_children, args[1].id) == 1 then
-        callback("success", self.cached_children[args[1].id])
-        return
+    if not vim.tbl_isempty(self.cached_children) then
+        if vim.fn.has_key(self.cached_children, args[1].id) == 1 then
+            callback("success", self.cached_children[args[1].id])
+            return
+        end
     end
 
     local params = {
@@ -74,11 +98,17 @@ function provider:getChildren(callback, ...)
     }
 
     params = vim.tbl_extend("force", params, self.extra_params)
-    --- TODO call request
+
+    local handler = function(data)
+        self:handle_children_data(callback, data)
+    end
+    print "Expand node ..."
+
+    require("ccls.protocol").create_win_or_float(self.filetype, self.bufnr, self.method, params, handler)
 end
 
 --- Produce the parent of a given object.
-function provider:getParent(callback, data)
+function provider:getParent(callback, _)
     callback "failure"
 end
 
@@ -88,7 +118,17 @@ function provider:getTreeItem(callback, data)
     local line = tonumber(data.location.range.start.line) + 1
     local column = tonumber(data.location.range.start.character) + 1
 
-    local tree_item = require("treeItem").new(data, file, line, column)
+    -- local tree_item = require("treeItem").new(data, file, line, column)
+
+    local tree_item = {
+        id = data.id,
+        command = function()
+            jump(file, line, column)
+        end,
+        label = get_label(data),
+        getCollaplsibleState = provider:get_collapsible_state(data),
+    }
+
     callback("success", tree_item)
 end
 
