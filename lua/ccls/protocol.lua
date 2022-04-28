@@ -44,7 +44,7 @@ local function qfRequest(params, method, bufnr, name)
     end
 end
 
-local function create_win_or_float(filetype, bufnr, method, params, handler)
+function protocol.create_win_or_float(filetype, bufnr, method, params, handler)
     print "Creating window"
     vim.api.nvim_create_augroup("NodeTree", { clear = true })
     local buftype = vim.api.nvim_buf_get_option(bufnr, "buftype")
@@ -105,13 +105,7 @@ local function handle_tree(bufnr, filetype, method, extra_params, data)
         end,
     })
 
-    local p = require("ccls.provider"):new {
-        root = data,
-        method = method,
-        filetype = filetype,
-        bufnr = bufnr,
-        extra_params = extra_params,
-    }
+    local p = require("ccls.provider"):new(data, method, filetype, bufnr, extra_params)
 
     require("ccls.tree").init(p, float_buf)
 end
@@ -136,7 +130,7 @@ function protocol.request(method, config, hierarchy)
         local handler = function(...)
             handle_tree(bufnr, vim.api.nvim_buf_get_option(bufnr, "filetype"), method, config, ...)
         end
-        create_win_or_float(vim.api.nvim_buf_get_option(bufnr, "filetype"), bufnr, method, params, handler)
+        protocol.create_win_or_float(vim.api.nvim_buf_get_option(bufnr, "filetype"), bufnr, method, params, handler)
     else
         local name = method:gsub("%$ccls/", "")
         qfRequest(params, method, bufnr, name)

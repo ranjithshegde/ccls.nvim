@@ -5,10 +5,11 @@ local Tree = {
     provider = {},
 }
 
-function Tree:new(p)
-    setmetatable(p, self)
-    self.__index = self
-    return p
+function Tree:new(provider, bufnr)
+    Tree.bufnr = bufnr
+    Tree.provider = provider
+    local t = Tree
+    return t
 end
 
 --- Expand or collapse the node under cursor, and render the tree.
@@ -31,15 +32,30 @@ end
 function Tree:update(...)
     local args = { ... }
 
-    if #args < 1 then
+    -- TODO len
+    -- if #args < 1 then
+    if vim.fn.len(args) < 1 then
         self.provider:getChildren(function(status, obj)
+            local ll = false
+            local keyindex
+            for key, value in pairs(obj) do
+                if vim.tbl_islist(value) then
+                    ll = true
+                    keyindex = key
+                    return
+                end
+            end
             self.provider:getTreeItem(function(...)
-                require("ccls.tree.utils").tree_set_root_cb(self, obj, ...)
-            end, obj)
+                if ll then
+                    require("ccls.tree.utils").tree_set_root_cb(self, obj[keyindex], ...)
+                else
+                    require("ccls.tree.utils").tree_set_root_cb(self, obj, ...)
+                end
+            end, ll and obj[keyindex] or obj)
         end)
     else
         self.provider:getTreeItem(function(...)
-            require("ccls.tree.utils").node_update(self, args[1], ...)
+            require("ccls.tree.node").node_update(self, args[1], ...)
         end, args[1])
     end
 end

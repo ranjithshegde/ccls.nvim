@@ -9,17 +9,24 @@ local Node = {
     children = {},
 }
 
--- Insert a new node in the tree, internally represented by a unique progressive
--- integer identifier {id}. The node represents a certain {object} (children of
--- {parent}) belonging to a given {tree}, having an associated action to be
--- triggered on execution defined by the function object {exec}. If {collapsed}
--- is true the node will be rendered as collapsed in the view. If {lazy_open} is
--- true, the children of the node will be fetched when the node is expanded by
--- the user.
-function Node:new(p)
-    setmetatable(p, self)
-    self.__index = self
-    return p
+-- -- Insert a new node in the tree, internally represented by a unique progressive
+-- -- integer identifier {id}. The node represents a certain {object} (children of
+-- -- {parent}) belonging to a given {tree}, having an associated action to be
+-- -- triggered on execution defined by the function object {exec}. If {collapsed}
+-- -- is true the node will be rendered as collapsed in the view. If {lazy_open} is
+-- -- true, the children of the node will be fetched when the node is expanded by
+-- -- the user.
+function Node:new(id, tree, object, treeItem, parent)
+    Node.id = id + 1
+    Node.tree = tree
+    Node.object = object
+    Node.tree_item = treeItem
+    Node.parent = parent
+    Node.collapsed = treeItem.collapsibleState == "collapsed"
+    Node.lazy_open = treeItem.collapsibleState ~= "none"
+
+    local n = Node
+    return n
 end
 
 --- Return the depth level of the node in the tree. The level is defined
@@ -53,31 +60,43 @@ function Node:node_render(level)
 
     local mark = "• "
 
-    if #self.children > 0 or self.lazy_open ~= false then
+    -- TODO len
+    -- if #self.children > 0 or self.lazy_open ~= false then
+    if vim.fn.len(self.children) > 0 or self.lazy_open ~= false then
         mark = self.collapsed and "▸ " or "▾ "
     end
 
     local label = vim.split(self.tree_item.label, "\n")
-    self.tree.index = vim.tbl_deep_extend("force", self.tree.index, vim.tbl_map(vim.fn.range, vim.fn.range(#label)))
+    -- TODO len
+    -- self.tree.index = vim.tbl_deep_extend("force", self.tree.index, vim.tbl_map(vim.fn.range, vim.fn.range(#label)))
+    self.tree.index = vim.tbl_deep_extend(
+        "force",
+        self.tree.index,
+        vim.tbl_map(vim.fn.range, vim.fn.range(vim.fn.len(label)))
+    )
 
-    local repr = indent
-        .. mark
-        .. label[1]
-        .. table.concat(vim.fn.map(label, function(_, l)
-            return "\n" .. indent .. " " .. l
-        end))
+    local repr = indent .. mark .. label[1]
+
+    if label[2] then
+        repr = repr
+            .. table.concat(vim.fn.map(label[2], function(_, l)
+                return "\n" .. indent .. " " .. l
+            end))
+    end
 
     local lines = repr
 
     if not self.collapsed then
         if self.lazy_open then
             self.lazy_open = false
-            local callback = function() end
+            local callback = function(...)
+                require("ccls.tree.utils").node_get_children_cb(self, ...)
+            end
             self.tree.provider:getChildren(callback, self.object)
         end
     end
 
-    for child in pairs(self.children) do
+    for _, child in pairs(self.children) do
         table.insert(lines, child:node_render(level + 1))
     end
 

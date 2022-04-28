@@ -8,9 +8,7 @@ local nodeTree = {}
 --- known internal identifier of the nodes. The {index} is a list that
 --- maps line numbers to nodes.
 function nodeTree.init(provider, bufnr)
-    local t = require("ccls.tree.tree"):new {
-        provider = provider,
-    }
+    local t = require("ccls.tree.tree"):new(provider, bufnr)
 
     vim.api.nvim_create_autocmd("BufEnter", {
         buffer = bufnr,

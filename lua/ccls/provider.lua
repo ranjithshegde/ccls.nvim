@@ -8,15 +8,21 @@ local provider = {
     extra_params = {},
 }
 
-function provider:new(p)
-    setmetatable(p, self)
-    self.__index = self
+function provider:new(data, method, filetype, bufnr, extra_params)
+    provider.root = data
+    provider.method = method
+    provider.filetype = filetype
+    provider.bufnr = bufnr
+    provider.extra_params = extra_params
+    local p = provider
     return p
 end
 
 --- Get the label for a given node.
 local function get_label(data)
-    if vim.fn.has_key(data, "fieldName") == 1 and #data.fieldName >= 1 then
+    -- TODO len
+    -- if vim.fn.has_key(data, "fieldName") == 1 and #data.fieldName >= 1 then
+    if vim.fn.has_key(data, "fieldName") == 1 and vim.fn.len(data.fieldName) >= 1 then
         return data.fieldName
     else
         return data.name
@@ -53,7 +59,9 @@ end
 
 --- Recursively cache the children.
 function provider:add_children_to_cache(data)
-    if vim.fn.has_key(data, "children") ~= 1 or #data.children < 1 then
+    -- if vim.fn.has_key(data, "children") ~= 1 or #data.children < 1 then
+    -- TODO len
+    if vim.fn.has_key(data, "children") ~= 1 or vim.fn.len(data.children) < 1 then
         return
     end
 
@@ -74,12 +82,16 @@ end
 function provider:getChildren(callback, ...)
     local args = { ... }
 
-    if #args < 1 then
+    -- TODO lem
+    -- if #args < 1 then
+    if vim.fn.len(args) < 1 then
         callback("success", self.root)
         return
     end
 
-    if vim.fn.has_key(args[1], "children") == 1 and #args[1].children > 0 then
+    -- TODO length
+    -- if vim.fn.has_key(args[1], "children") == 1 and #args[1].children > 0 then
+    if vim.fn.has_key(args[1], "children") == 1 and vim.fn.len(args[1].children) > 0 then
         callback("success", args[1].children)
         return
     end
