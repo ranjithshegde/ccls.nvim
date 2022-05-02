@@ -16,6 +16,7 @@ end
 --- Please refer to *s:node_set_collapsed()* for details about the
 --- arguments and behaviour.
 function Tree:set_collapsed_under_cursor(collapsed)
+    print "At tree set collapse"
     local node = require("ccls.tree.utils").get_node_under_cursor(self)
     node.set_collapsed(collapsed)
     Tree:render()
@@ -23,6 +24,7 @@ end
 
 --- Run the action associated to the node currently under the cursor.
 function Tree:exec_node_under_cursor()
+    print "At tree exec node"
     require("ccls.tree.utils").get_node_under_cursor(self).exec()
 end
 
@@ -30,28 +32,17 @@ end
 --- update the whole tree. If called with an {object} as argument, update
 --- all the subtrees of nodes corresponding to {object}.
 function Tree:update(...)
+    print "At tree update"
     local args = { ... }
 
     -- TODO len
     -- if #args < 1 then
     if vim.fn.len(args) < 1 then
+        print "at tree update args < 1"
         self.provider:getChildren(function(status, obj)
-            local ll = false
-            local keyindex
-            for key, value in pairs(obj) do
-                if vim.tbl_islist(value) then
-                    ll = true
-                    keyindex = key
-                    return
-                end
-            end
             self.provider:getTreeItem(function(...)
-                if ll then
-                    require("ccls.tree.utils").tree_set_root_cb(self, obj[keyindex], ...)
-                else
-                    require("ccls.tree.utils").tree_set_root_cb(self, obj, ...)
-                end
-            end, ll and obj[keyindex] or obj)
+                require("ccls.tree.utils").tree_set_root_cb(self, obj, ...)
+            end, obj)
         end)
     else
         self.provider:getTreeItem(function(...)
@@ -69,6 +60,7 @@ end
 --- tree view. Clear the index, setting it to a list containing a guard
 --- value for index 0 (line numbers are one-based).
 function Tree.render(tree)
+    print "At tree render"
     if vim.api.nvim_buf_get_option(0, "filetype") ~= "NodeTree" then
         return
     end

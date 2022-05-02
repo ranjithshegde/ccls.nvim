@@ -128,7 +128,7 @@ function protocol.request(method, config, hierarchy)
         params.levels = vim.g.ccls_levels or 3
 
         local handler = function(...)
-            handle_tree(bufnr, vim.api.nvim_buf_get_option(bufnr, "filetype"), method, config, ...)
+            handle_tree(bufnr, vim.api.nvim_buf_get_option(bufnr, "filetype"), method, {}, ...)
         end
         protocol.create_win_or_float(vim.api.nvim_buf_get_option(bufnr, "filetype"), bufnr, method, params, handler)
     else
