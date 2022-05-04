@@ -8,32 +8,23 @@ local provider = {
     extra_params = {},
 }
 
-function provider:new(data, method, filetype, bufnr, extra_params)
+function provider:create(data, method, filetype, bufnr, extra_params)
     provider.root = data
+    provider.root_state = "expanded"
     provider.method = method
     provider.filetype = filetype
     provider.bufnr = bufnr
     provider.extra_params = extra_params
-    local p = provider
-    return p
+    return provider
 end
 
 --- Get the label for a given node.
 local function get_label(data)
-    print "At get label"
     -- TODO len
     -- if vim.fn.has_key(data, "fieldName") == 1 and #data.fieldName >= 1 then
     if vim.fn.has_key(data, "fieldName") == 1 and vim.fn.len(data.fieldName) >= 1 then
-        -- if vim.g.foo <= 1 then
-        --     vim.g.ccls_llabel = data.fieldName
-        --     vim.g.foo = vim.g.foo + 1
-        -- end
         return data.fieldName
     else
-        -- if vim.g.foo <= 1 then
-        --     vim.g.ccls_llabel = data.name
-        --     vim.g.foo = vim.g.foo + 1
-        -- end
         return data.name
     end
 end
@@ -54,7 +45,6 @@ end
 --- Get the collapsibleState for a node. The root is returned expanded on
 --- the first request only (to avoid issues with cyclic graphs).
 function provider:get_collapsible_state(data)
-    print "At get collapsibleState"
     local result = "none"
     if data.numChildren > 0 then
         if data.id == self.root.id then
@@ -64,19 +54,11 @@ function provider:get_collapsible_state(data)
             result = "collapsed"
         end
     end
-    -- if vim.g.foo == 1 then
-    --     vim.g.ccls_lstate1 = result
-    -- end
-    -- if vim.g.foo == 2 then
-    --     vim.g.ccls_lstate2 = result
-    -- end
-    -- vim.g.foo = vim.g.foo + 1
     return result
 end
 
 --- Recursively cache the children.
 function provider:add_children_to_cache(data)
-    print "At add_children_to_cache "
     -- if vim.fn.has_key(data, "children") ~= 1 or #data.children < 1 then
     -- TODO len
     if vim.fn.has_key(data, "children") ~= 1 or vim.fn.len(data.children) < 1 then
@@ -91,7 +73,6 @@ end
 
 --- Handle incominc children data.
 function provider:handle_children_data(callback, data)
-    print "At handle_children_data "
     self:add_children_to_cache(data)
     callback("success", data.children)
 end
@@ -100,7 +81,6 @@ end
 --- or the root of the tree when called with no optional argument.
 function provider:getChildren(callback, ...)
     local args = { ... }
-    print "getChildren before callback"
 
     -- TODO lem
     -- if #args < 1 then
@@ -111,10 +91,10 @@ function provider:getChildren(callback, ...)
             self.id = 0
         end
         callback("success", self.root)
-        print "getChildren after callback"
         return
     end
 
+    vim.pretty_print(args[1].id)
     if type(args[1].id) ~= "number" then
         if args[1].id ~= "" then
             args[1].id = tonumber(args[1].id)
@@ -126,16 +106,9 @@ function provider:getChildren(callback, ...)
     -- TODO length
     -- if vim.fn.has_key(args[1], "children") == 1 and #args[1].children > 0 then
     if vim.fn.has_key(args[1], "children") == 1 and vim.fn.len(args[1].children) > 0 then
-        -- if vim.g.foo <= 1 then
-        --     local foo = vim.fn.string(args[1].children)
-        --     vim.fn.writefile({ foo }, vim.fn.glob "~/Trials/get_children_l2_data_children.json")
-        --     vim.g.foo = vim.g.foo + 1
-        -- end
         callback("success", args[1].children)
         return
     end
-
-    -- vim.g.msg_ccls = "here now"
 
     if not vim.tbl_isempty(self.cached_children) then
         if vim.fn.has_key(self.cached_children, args[1].id) == 1 then
@@ -162,20 +135,11 @@ end
 
 --- Produce the parent of a given object.
 function provider:getParent(callback, _)
-    print "At get parent "
     callback "failure"
 end
 
 --- Produce the tree item representation for a given object.
 function provider:getTreeItem(callback, data)
-    -- if vim.g.foo == 2 then
-    --     local foo = vim.fn.string(data)
-    --     vim.fn.writefile({ foo }, vim.fn.glob "~/Trials/get_tree_item_l2.json")
-    --     -- vim.g.children = data
-    -- end
-    -- vim.g.foo = vim.g.foo + 1
-    print "At get treeItem "
-    print "get Tree Item before"
     local file = vim.uri_to_fname(data.location.uri)
     local line = tonumber(data.location.range.start.line) + 1
     local column = tonumber(data.location.range.start.character) + 1
@@ -197,13 +161,7 @@ function provider:getTreeItem(callback, data)
         collapsibleState = collapsibleState,
     }
 
-    -- if vim.g.foo == 2 then
-    --     vim.g.ccls_ltree2 = tree_item
-    -- end
-    -- vim.g.foo = vim.g.foo + 1
-
     callback("success", tree_item)
-    print "get Tree Item after"
 end
 
 return provider

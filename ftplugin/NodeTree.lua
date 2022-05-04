@@ -16,6 +16,26 @@ else
     vim.opt_local.swapfile = false
     vim.opt_local.wrap = false
 
+    vim.keymap.set("n", "<Plug>(nodetree-toggle-node)", function()
+        require("ccls.tree.tree"):set_collapsed_under_cursor(-1)
+    end, { buffer = true, silent = true })
+
+    vim.keymap.set("n", "<Plug>(nodetree-open-node)", function()
+        require("ccls.tree.tree"):set_collapsed_under_cursor(false)
+    end, { buffer = true, silent = true })
+
+    vim.keymap.set("n", "<Plug>(nodetree-close-node)", function()
+        require("ccls.tree.tree"):set_collapsed_under_cursor(true)
+    end, { buffer = true, silent = true })
+
+    vim.keymap.set("n", "<Plug>(nodetree-execute-node)", function()
+        require("ccls.tree.tree"):exec_node_under_cursor()
+    end, { buffer = true, silent = true })
+
+    vim.keymap.set("n", "<Plug>(nodetree-wipe-tree)", function()
+        require("ccls.tree.tree"):wipe()
+    end, { buffer = true, silent = true })
+
     if vim.fn.exists(vim.g.nodetree_no_default_maps) ~= 1 then
         vim.keymap.set("n", "o", "<Plug>(nodetree-toggle-node)", { buffer = true })
         vim.keymap.set("n", "<cr>", "<Plug>(nodetree-execute-node)", { buffer = true })
