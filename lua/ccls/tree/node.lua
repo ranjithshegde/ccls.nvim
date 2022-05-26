@@ -17,6 +17,7 @@ local Node = {
 -- true, the children of the node will be fetched when the node is expanded by
 -- the user.
 function Node:new(p)
+    self = require("ccls.tree.utils").expand(self, p)
     setmetatable(p, self)
     self.__index = self
     return p
@@ -50,38 +51,47 @@ end
 
 function Node:node_render(level)
     local indent = string.rep(" ", 2 * level)
-
     local mark = "• "
 
-    if #self.children > 0 or self.lazy_open ~= false then
+    if #vim.tbl_keys(self.children) > 0 or self.lazy_open ~= false then
         mark = self.collapsed and "▸ " or "▾ "
     end
 
     local label = vim.split(self.tree_item.label, "\n")
-    self.tree.index = vim.tbl_deep_extend("force", self.tree.index, vim.tbl_map(vim.fn.range, vim.fn.range(#label)))
 
-    local repr = indent
-        .. mark
-        .. label[1]
-        .. table.concat(vim.fn.map(label, function(_, l)
-            return "\n" .. indent .. " " .. l
-        end))
+    local indices = vim.fn.range(vim.fn.len(label))
+    for index, _ in ipairs(indices) do
+        indices[index] = self
+    end
+    table.insert(self.tree.index, unpack(indices))
+
+    local repr = indent .. mark .. label[1]
+
+    if label[2] then
+        repr = repr
+            .. table.concat(vim.fn.map(require("ccls.tree.utils").list_unpack(label, 2), function(_, l)
+                return "\n" .. indent .. " " .. l
+            end))
+    end
 
     local lines = repr
-
     if not self.collapsed then
         if self.lazy_open then
             self.lazy_open = false
-            local callback = function() end
+            local callback = function(...)
+                require("ccls.tree.utils").node_get_children_cb(self, ...)
+            end
+
             self.tree.provider:getChildren(callback, self.object)
+        end
+
+        for _, child in ipairs(self.children) do
+            table.insert(lines, child:node_render(level + 1))
         end
     end
 
-    for child in pairs(self.children) do
-        table.insert(lines, child:node_render(level + 1))
-    end
-
-    return table.concat(lines, "\n")
+    local newline = table.concat(lines, "\n")
+    return newline
 end
 
 --- If {status} equals 'success', update all nodes of {tree} representing
@@ -91,7 +101,7 @@ function Node.node_update(tree, object, status, tree_item)
         return
     end
 
-    for node in
+    for _, node in
         pairs(require("ccls.tree.utils").search_subtree(tree.root, function(n)
             return n.object == object
         end))

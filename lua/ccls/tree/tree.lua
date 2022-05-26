@@ -6,6 +6,7 @@ local Tree = {
 }
 
 function Tree:new(p)
+    self = require("ccls.tree.utils").expand(self, p)
     setmetatable(p, self)
     self.__index = self
     return p
@@ -31,7 +32,7 @@ end
 function Tree:update(...)
     local args = { ... }
 
-    if #args < 1 then
+    if #vim.tbl_keys(args) < 1 then
         self.provider:getChildren(function(status, obj)
             self.provider:getTreeItem(function(...)
                 require("ccls.tree.utils").tree_set_root_cb(self, obj, ...)
@@ -39,7 +40,7 @@ function Tree:update(...)
         end)
     else
         self.provider:getTreeItem(function(...)
-            require("ccls.tree.utils").node_update(self, args[1], ...)
+            require("ccls.tree.node").node_update(self, args[1], ...)
         end, args[1])
     end
 end
@@ -57,7 +58,7 @@ function Tree.render(tree)
         return
     end
 
-    local cursor = vim.fn.getpos "."
+    local cursor = vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win())
     tree.index = { -1 }
     local text = tree.root:node_render(0)
 
@@ -67,28 +68,6 @@ function Tree.render(tree)
     vim.cmd "$d_"
     vim.opt_local.modifiable = false
     vim.fn.setpos(".", cursor)
-end
-
-function Tree.keys()
-    vim.keymap.set("n", "<Plug>(nodetree-toggle-node)", function()
-        Tree:set_collapsed_under_cursor(-1)
-    end, { buffer = true, silent = true })
-
-    vim.keymap.set("n", "<Plug>(nodetree-open-node)", function()
-        Tree:set_collapsed_under_cursor(false)
-    end, { buffer = true, silent = true })
-
-    vim.keymap.set("n", "<Plug>(nodetree-close-node)", function()
-        Tree:set_collapsed_under_cursor(true)
-    end, { buffer = true, silent = true })
-
-    vim.keymap.set("n", "<Plug>(nodetree-execute-node)", function()
-        Tree:exec_node_under_cursor()
-    end, { buffer = true, silent = true })
-
-    vim.keymap.set("n", "<Plug>(nodetree-wipe-tree)", function()
-        Tree:wipe()
-    end, { buffer = true, silent = true })
 end
 
 return Tree

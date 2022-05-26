@@ -9,6 +9,7 @@ local provider = {
 }
 
 function provider:new(p)
+    self = require("ccls.tree.utils").expand(self, p)
     setmetatable(p, self)
     self.__index = self
     return p
@@ -16,7 +17,7 @@ end
 
 --- Get the label for a given node.
 local function get_label(data)
-    if vim.fn.has_key(data, "fieldName") == 1 and #data.fieldName >= 1 then
+    if vim.fn.has_key(data, "fieldName") == 1 and #vim.tbl_keys(data.fieldName) >= 1 then
         return data.fieldName
     else
         return data.name
@@ -53,12 +54,12 @@ end
 
 --- Recursively cache the children.
 function provider:add_children_to_cache(data)
-    if vim.fn.has_key(data, "children") ~= 1 or #data.children < 1 then
+    if vim.fn.has_key(data, "children") ~= 1 or #vim.tbl_keys(data.children) < 1 then
         return
     end
 
     self.cached_children[data.id] = data.children
-    for child in pairs(data.children) do
+    for _, child in pairs(data.children) do
         self:add_children_to_cache(child)
     end
 end
@@ -74,12 +75,25 @@ end
 function provider:getChildren(callback, ...)
     local args = { ... }
 
-    if #args < 1 then
+    if #vim.tbl_keys(args) < 1 then
+        if self.id ~= "" then
+            self.id = tonumber(self.id)
+        else
+            self.id = 0
+        end
         callback("success", self.root)
         return
     end
 
-    if vim.fn.has_key(args[1], "children") == 1 and #args[1].children > 0 then
+    if type(args[1].id) ~= "number" then
+        if args[1].id ~= "" then
+            args[1].id = tonumber(args[1].id)
+        else
+            args[1].id = 0
+        end
+    end
+
+    if vim.fn.has_key(args[1], "children") == 1 and #vim.tbl_keys(args[1].children) > 0 then
         callback("success", args[1].children)
         return
     end
@@ -117,14 +131,22 @@ function provider:getTreeItem(callback, data)
     local file = vim.uri_to_fname(data.location.uri)
     local line = tonumber(data.location.range.start.line) + 1
     local column = tonumber(data.location.range.start.character) + 1
-
+    if type(data.id) ~= "number" then
+        if data.id ~= "" then
+            data.id = tonumber(data.id)
+        else
+            data.id = 0
+        end
+    end
+    local collapsibleState = provider:get_collapsible_state(data)
+    local label = get_label(data)
     local tree_item = {
         id = data.id,
         command = function()
             jump(file, line, column)
         end,
-        label = get_label(data),
-        getCollaplsibleState = provider:get_collapsible_state(data),
+        label = label,
+        collapsibleState = collapsibleState,
     }
 
     callback("success", tree_item)

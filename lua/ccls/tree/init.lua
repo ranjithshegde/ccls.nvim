@@ -20,7 +20,6 @@ function nodeTree.init(provider, bufnr)
             t:tree_render()
         end,
     })
-    t.keys()
 
     vim.opt_local.filetype = "NodeTree"
     t:update()
