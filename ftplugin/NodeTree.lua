@@ -5,11 +5,7 @@ else
 
     vim.opt_local.bufhidden = "wipe"
     vim.opt_local.buftype = "nofile"
-<<<<<<< HEAD
-    vim.opt_local.foldcolumn = 0
-=======
     vim.opt_local.foldcolumn = "0"
->>>>>>> 7ad33a5 (Initial commit)
     vim.opt_local.foldmethod = "manual"
     vim.opt_local.buflisted = false
     vim.opt_local.foldenable = false
@@ -20,29 +16,27 @@ else
     vim.opt_local.swapfile = false
     vim.opt_local.wrap = false
 
-<<<<<<< HEAD
+
     vim.keymap.set("n", "<Plug>(nodetree-toggle-node)", function()
-        -- Tree:set_collapsed_under_cursor(-1)
-    end, { buffer = true, silet = true })
+        require("ccls.tree.tree"):set_collapsed_under_cursor(-1)
+    end, { buffer = true, silent = true })
 
     vim.keymap.set("n", "<Plug>(nodetree-open-node)", function()
-        -- Tree:set_collapsed_under_cursor(false)
-    end, { buffer = true, silet = true })
+        require("ccls.tree.tree"):set_collapsed_under_cursor(false)
+    end, { buffer = true, silent = true })
 
     vim.keymap.set("n", "<Plug>(nodetree-close-node)", function()
-        -- require("Tree"):set_collapsed_under_cursor(true)
-    end, { buffer = true, silet = true })
+        require("ccls.tree.tree"):set_collapsed_under_cursor(true)
+    end, { buffer = true, silent = true })
 
     vim.keymap.set("n", "<Plug>(nodetree-execute-node)", function()
-        -- Tree:exec_node_under_cursor()
-    end, { buffer = true, silet = true })
+        require("ccls.tree.tree"):exec_node_under_cursor()
+    end, { buffer = true, silent = true })
 
     vim.keymap.set("n", "<Plug>(nodetree-wipe-tree)", function()
-        -- Tree:wipe()
-    end, { buffer = true, silet = true })
+        require("ccls.tree.tree"):wipe()
+    end, { buffer = true, silent = true })
 
-=======
->>>>>>> 7ad33a5 (Initial commit)
     if vim.fn.exists(vim.g.nodetree_no_default_maps) ~= 1 then
         vim.keymap.set("n", "o", "<Plug>(nodetree-toggle-node)", { buffer = true })
         vim.keymap.set("n", "<cr>", "<Plug>(nodetree-execute-node)", { buffer = true })
