@@ -1,4 +1,5 @@
 local Tree = {
+    increment = 1,
     maxid = -1,
     root = {},
     index = {},
@@ -6,10 +7,10 @@ local Tree = {
 }
 
 function Tree:new(provider, bufnr)
-    Tree.bufnr = bufnr
-    Tree.provider = provider
-    Tree.maxid = -1
-    return Tree
+    local t = Tree
+    t.bufnr = bufnr
+    t.provider = provider
+    return t
 end
 
 --- Expand or collapse the node under cursor, and render the tree.
@@ -17,13 +18,13 @@ end
 --- arguments and behaviour.
 function Tree:set_collapsed_under_cursor(collapsed)
     local node = require("ccls.tree.utils").get_node_under_cursor(self)
-    node.set_collapsed(collapsed)
+    node:set_collapsed(collapsed)
     Tree:render()
 end
 
 --- Run the action associated to the node currently under the cursor.
 function Tree:exec_node_under_cursor()
-    require("ccls.tree.utils").get_node_under_cursor(self).exec()
+    require("ccls.tree.utils").get_node_under_cursor(self):exec()
 end
 
 --- Update the view if nodes have changed. If called with no arguments,
@@ -32,9 +33,8 @@ end
 function Tree:update(...)
     local args = { ... }
 
-    -- TODO len
-    -- if #args < 1 then
     if vim.fn.len(args) < 1 then
+        ---@diagnostic disable-next-line: unused-local
         self.provider:getChildren(function(status, obj)
             self.provider:getTreeItem(function(...)
                 require("ccls.tree.utils").tree_set_root_cb(self, obj, ...)
@@ -60,18 +60,18 @@ function Tree.render(tree)
         return
     end
 
-    -- local cursor = vim.fn.getpos "."
     local cursor = vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win())
     tree.index = { -1 }
 
     local text = tree.root:node_render(0)
 
+    text = vim.split(text, "\n")
     vim.opt_local.modifiable = true
-    vim.api.nvim_command "silent 1,$delete _"
-    vim.cmd("silent 0put=" .. text)
-    vim.cmd "$d_"
+
+    vim.api.nvim_buf_set_lines(0, Tree.increment, Tree.increment, false, text)
     vim.opt_local.modifiable = false
-    vim.fn.setpos(".", cursor)
+    vim.api.nvim_win_set_cursor(vim.api.nvim_get_current_win(), cursor)
+    Tree.increment = Tree.increment + 1
 end
 
 return Tree

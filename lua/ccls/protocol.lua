@@ -67,8 +67,11 @@ function protocol.create_win_or_float(filetype, bufnr, method, params, handler)
             vim.api.nvim_buf_set_option(0, "filetype", "NodeTree")
             vim.cmd "silent 0file"
             vim.api.nvim_buf_set_option(0, "buftype", buftype)
-            if vim.fn.filereadable(temp) == 1 then
-                vim.fn.delete(temp)
+            -- if vim.fn.filereadable(temp) == 1 then
+            if io.open(temp, "r") then
+                -- vim.fn.delete(temp)
+                io.close(temp)
+                os.remove(temp)
             end
         end
     end
@@ -107,7 +110,7 @@ local function handle_tree(bufnr, filetype, method, extra_params, view, data)
             height = opts.height or 20,
             row = 0,
             col = 0,
-            border = "shadow",
+            border = "rounded",
         }
         local float_id = vim.api.nvim_open_win(vim.api.nvim_create_buf(false, true), 0, buffer_options)
         float_buf = vim.api.nvim_win_get_buf(float_id)

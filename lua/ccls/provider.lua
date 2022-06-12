@@ -20,9 +20,7 @@ end
 
 --- Get the label for a given node.
 local function get_label(data)
-    -- TODO len
-    -- if vim.fn.has_key(data, "fieldName") == 1 and #data.fieldName >= 1 then
-    if vim.fn.has_key(data, "fieldName") == 1 and vim.fn.len(data.fieldName) >= 1 then
+    if vim.tbl_contains(vim.tbl_keys(data), "fieldName") and vim.fn.len(data.fieldName) >= 1 then
         return data.fieldName
     else
         return data.name
@@ -31,12 +29,12 @@ end
 
 local function jump(file, line, column)
     local nodeTree_bufno = vim.fn.bufnr "%"
-    vim.cmd 'silent execute "normal! <C-W><C-P>'
+    vim.cmd 'silent execute "normal! <C-W><C-P>"'
     if vim.g.ccls_close_on_jump then
         vim.api.nvim_buf_delete(nodeTree_bufno, { force = true })
     end
     local buffer = vim.fn.bufnr(file)
-    local command = buffer and "b " .. buffer or "edit " .. file
+    local command = buffer >= 0 and "b " .. buffer or "edit " .. file
     -- vim.cmd(command .. " | call cursor(" .. line .. "," .. column .. ")")
     vim.cmd(command)
     vim.fn.cursor { line, column }
@@ -61,7 +59,7 @@ end
 function provider:add_children_to_cache(data)
     -- if vim.fn.has_key(data, "children") ~= 1 or #data.children < 1 then
     -- TODO len
-    if vim.fn.has_key(data, "children") ~= 1 or vim.fn.len(data.children) < 1 then
+    if not vim.tbl_contains(vim.tbl_keys(data), "children") or #vim.tbl_keys(data.children) < 1 then
         return
     end
 
@@ -82,9 +80,8 @@ end
 function provider:getChildren(callback, ...)
     local args = { ... }
 
-    -- TODO lem
-    -- if #args < 1 then
     if vim.fn.len(args) < 1 then
+        --TODO id
         if self.id ~= "" then
             self.id = tonumber(self.id)
         else
@@ -94,7 +91,7 @@ function provider:getChildren(callback, ...)
         return
     end
 
-    vim.pretty_print(args[1].id)
+    --TODO id
     if type(args[1].id) ~= "number" then
         if args[1].id ~= "" then
             args[1].id = tonumber(args[1].id)
@@ -103,18 +100,14 @@ function provider:getChildren(callback, ...)
         end
     end
 
-    -- TODO length
-    -- if vim.fn.has_key(args[1], "children") == 1 and #args[1].children > 0 then
-    if vim.fn.has_key(args[1], "children") == 1 and vim.fn.len(args[1].children) > 0 then
+    if vim.tbl_contains(vim.fn.keys(args[1]), "children") and #vim.tbl_keys(args[1].children) > 0 then
         callback("success", args[1].children)
         return
     end
 
-    if not vim.tbl_isempty(self.cached_children) then
-        if vim.fn.has_key(self.cached_children, args[1].id) == 1 then
-            callback("success", self.cached_children[args[1].id])
-            return
-        end
+    if vim.tbl_contains(vim.tbl_keys(self.cached_children), args[1].id) then
+        callback("success", self.cached_children[args[1].id])
+        return
     end
 
     local params = {
@@ -124,6 +117,9 @@ function provider:getChildren(callback, ...)
     }
 
     params = vim.tbl_extend("force", params, self.extra_params)
+    if vim.tbl_contains(vim.tbl_keys(args[1]), "kind") then
+        params["kind"] = args[1].kind
+    end
 
     local handler = function(data)
         self:handle_children_data(callback, data)
@@ -150,15 +146,14 @@ function provider:getTreeItem(callback, data)
             data.id = 0
         end
     end
-    local collapsibleState = provider:get_collapsible_state(data)
-    local label = get_label(data)
+
     local tree_item = {
         id = data.id,
         command = function()
             jump(file, line, column)
         end,
-        label = label,
-        collapsibleState = collapsibleState,
+        label = get_label(data),
+        collapsibleState = provider:get_collapsible_state(data),
     }
 
     callback("success", tree_item)

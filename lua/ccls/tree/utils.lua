@@ -4,7 +4,12 @@ local utils = {}
 function utils.node_get_tree_item_cb(node, object, status, treeItem)
     if status == "success" then
         local newnode = require("ccls.tree.node"):create(node.tree, object, treeItem, node)
-        table.insert(node.children, newnode)
+        -- table.insert(node.children, newnode)
+        node.children = vim.fn.add(node.children, newnode)
+        if vim.g.foo == 1 then
+            vim.g.ccls_ls = node
+        end
+        vim.g.foo = vim.g.foo + 1
         require("ccls.tree.tree").render(newnode.tree)
     end
 end
@@ -26,24 +31,21 @@ function utils.search_subtree(node, condition)
         return node
     end
 
-    -- TODO len
-    -- if #node.children < 1 then
-    if vim.fn.len(node.children) < 1 then
+    if #vim.tbl_keys(node.children) < 1 then
         return {}
     end
     local result = {}
 
     for _, child in pairs(node.children) do
-        vim.tbl_insert(result, utils.search_subtree(child, condition))
+        table.insert(result, utils.search_subtree(child, condition))
     end
     return result
 end
 
 --- Return the node currently under the cursor from the given {tree}.
 function utils.get_node_under_cursor(node)
-    -- TODO len
-    -- local index = math.min(vim.fn.line ".", #node.index - 1)
-    local index = math.min(vim.fn.line ".", vim.fn.len(node.index) - 1)
+    -- local index = math.min(vim.fn.line ".", vim.fn.len(node.index) - 1)
+    local index = math.min(vim.fn.line ".", #vim.tbl_keys(node.index))
     return node.index[index]
 end
 
@@ -94,6 +96,9 @@ end
 function utils.list_unpack(list, start)
     local l = {}
     local i = 1
+    if not list[start] then
+        return l
+    end
     for _, value in ipairs(list) do
         if i > start then
             table.insert(l, value)

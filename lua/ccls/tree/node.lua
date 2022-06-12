@@ -9,6 +9,17 @@ local Node = {
     children = {},
 }
 
+-- function Node:clear()
+--     self.id = nil
+--     self.tree = {}
+--     self.object = {}
+--     self.tree_item = {}
+--     self.parent = {}
+--     self.collapsed = ""
+--     self.lazy_open = ""
+--     self.children = {}
+-- end
+
 -- -- Insert a new node in the tree, internally represented by a unique progressive
 -- -- integer identifier {id}. The node represents a certain {object} (children of
 -- -- {parent}) belonging to a given {tree}, having an associated action to be
@@ -17,23 +28,24 @@ local Node = {
 -- -- true, the children of the node will be fetched when the node is expanded by
 -- -- the user.
 function Node:create(tree, object, treeItem, parent)
+    local n = Node
     tree.maxid = tree.maxid + 1
-    Node.id = tree.maxid
-    Node.tree = tree
-    Node.object = object
-    Node.tree_item = treeItem
-    Node.children = {}
-    Node.parent = parent
-    Node.collapsed = treeItem.collapsibleState == "collapsed"
-    Node.lazy_open = treeItem.collapsibleState ~= "none"
-    return Node
+    n.id = tree.maxid
+    n.tree = tree
+    n.object = object
+    n.tree_item = treeItem
+    n.children = {}
+    n.parent = parent
+    n.collapsed = treeItem.collapsibleState == "collapsed"
+    n.lazy_open = treeItem.collapsibleState ~= "none"
+    return n
 end
 
 --- Return the depth level of the node in the tree. The level is defined
 --- recursively: the root has depth 0, and each node has depth equal to the depth
 --- of its parent increased by 1.
 function Node:level()
-    if self.parent == {} then
+    if vim.tbl_isempty(self.parent) then
         return 0
     end
     return 1 + self.parent:level()
@@ -41,7 +53,8 @@ end
 
 --- Execute the action associated to a node
 function Node:exec()
-    if vim.fn.has_key(self.tree_item, "command") then
+    -- if vim.fn.has_key(self.tree_item, "command") then
+    if vim.tbl_contains(vim.tbl_keys(self.tree_item), "command") then
         self.tree_item.command()
     end
 end
@@ -52,6 +65,7 @@ end
 --- collapsed, when it is equal to -1 the node is toggled (it is expanded if it
 --- was collapsed, and vice versa).
 function Node:set_collapsed(collapsed)
+    ---TODO verify
     self.collapsed = collapsed < 0 and not self.collapsed or not collapsed
 end
 
@@ -59,13 +73,14 @@ function Node:node_render(level)
     local indent = string.rep(" ", 2 * level)
     local mark = "• "
 
-    -- TODO len
-    -- if #self.children > 0 or self.lazy_open ~= false then
-    if vim.fn.len(self.children) > 0 or self.lazy_open ~= false then
+    if #vim.tbl_keys(self.children) > 0 or self.lazy_open then
         mark = self.collapsed and "▸ " or "▾ "
     end
 
     local label = vim.split(self.tree_item.label, "\n")
+
+    -- vim.fn.writefile({ vim.g.ccls_lrepr .. " " .. table.concat(label, "\n") }, "/home/ranjith/l.txt", "a")
+    -- vim.g.ccls_lrepr = vim.g.ccls_lrepr + 1
 
     local indices = vim.fn.range(vim.fn.len(label))
     for index, _ in ipairs(indices) do
@@ -76,13 +91,15 @@ function Node:node_render(level)
     local repr = indent .. mark .. label[1]
 
     if label[2] then
+        print "Success"
         repr = repr
-            .. table.concat(vim.fn.map(require("ccls.tree.utils").list_unpack(label, 2), function(_, l)
+            .. table.concat(vim.tbl_map(function(_, l)
                 return "\n" .. indent .. " " .. l
-            end))
+            end, require("ccls.tree.utils").list_unpack(label, 2)))
     end
 
-    local lines = repr
+    local lines = { repr }
+
     if not self.collapsed then
         if self.lazy_open then
             self.lazy_open = false
@@ -92,15 +109,15 @@ function Node:node_render(level)
 
             self.tree.provider:getChildren(callback, self.object)
         end
-
+        -- if vim.g.foo == 1 then
+        --     vim.g.ccls_ls = self
+        -- end
+        -- vim.g.foo = vim.g.foo + 1
         for _, child in ipairs(self.children) do
             table.insert(lines, child:node_render(level + 1))
         end
     end
-
-    local newline = table.concat(lines, "\n")
-    vim.pretty_print(newline)
-    return newline
+    return table.concat(lines, "\n")
 end
 
 --- If {status} equals 'success', update all nodes of {tree} representing

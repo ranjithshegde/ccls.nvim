@@ -19,6 +19,7 @@ function ccls.member(kind)
 end
 
 function ccls.memberHeirarchy(kind, view)
+    vim.g.ccls_lrepr = 0
     require("ccls.protocol").request("$ccls/member", { kind = kind or 4 }, true, view)
 end
 
