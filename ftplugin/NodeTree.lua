@@ -16,6 +16,7 @@ else
     vim.opt_local.swapfile = false
     vim.opt_local.wrap = false
 
+
     vim.keymap.set("n", "<Plug>(nodetree-toggle-node)", function()
         require("ccls.tree.tree"):set_collapsed_under_cursor(-1)
     end, { buffer = true, silent = true })
