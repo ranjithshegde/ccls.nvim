@@ -10,4 +10,6 @@ It also allows to integrate with clangd so that there are no overlaps, if one wa
 
 It does not depend on nvim-lspconfig as it uses the built in `vim.lsp.start()`
 
+It leverages tree-sitter to render floating/sidebar NodeTree
+
 In the tree view it allows for floating previews. It also updatess the tagstack when performing a jump
