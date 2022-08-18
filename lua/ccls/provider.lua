@@ -15,6 +15,9 @@ function provider:create(data, method, filetype, bufnr, extra_params)
     provider.filetype = filetype
     provider.bufnr = bufnr
     provider.extra_params = extra_params
+    if provider.root.id and provider.root.id ~= "" then
+        provider.root.id = tonumber(provider.root.id)
+    end
     return provider
 end
 
@@ -81,23 +84,8 @@ function provider:getChildren(callback, ...)
     local args = { ... }
 
     if vim.fn.len(args) < 1 then
-        --TODO id
-        if self.id ~= "" then
-            self.id = tonumber(self.id)
-        else
-            self.id = 0
-        end
         callback("success", self.root)
         return
-    end
-
-    --TODO id
-    if type(args[1].id) ~= "number" then
-        if args[1].id ~= "" then
-            args[1].id = tonumber(args[1].id)
-        else
-            args[1].id = 0
-        end
     end
 
     if vim.tbl_contains(vim.fn.keys(args[1]), "children") and #vim.tbl_keys(args[1].children) > 0 then
@@ -139,13 +127,6 @@ function provider:getTreeItem(callback, data)
     local file = vim.uri_to_fname(data.location.uri)
     local line = tonumber(data.location.range.start.line) + 1
     local column = tonumber(data.location.range.start.character) + 1
-    if type(data.id) ~= "number" then
-        if data.id ~= "" then
-            data.id = tonumber(data.id)
-        else
-            data.id = 0
-        end
-    end
 
     local tree_item = {
         id = data.id,

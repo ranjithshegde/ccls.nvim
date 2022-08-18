@@ -11,7 +11,7 @@ function ccls.call(callee)
 end
 
 function ccls.callHeirarchy(callee, view)
-    require("ccls.protocol").request("$ccls/member", { callee = callee or false }, true, view)
+    require("ccls.protocol").request("$ccls/call", { callee = callee or false }, true, view)
 end
 
 function ccls.member(kind)
@@ -19,7 +19,6 @@ function ccls.member(kind)
 end
 
 function ccls.memberHeirarchy(kind, view)
-    vim.g.ccls_lrepr = 0
     require("ccls.protocol").request("$ccls/member", { kind = kind or 4 }, true, view)
 end
 

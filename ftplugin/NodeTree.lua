@@ -36,7 +36,7 @@ else
         require("ccls.tree.tree"):wipe()
     end, { buffer = true, silent = true })
 
-    if vim.fn.exists(vim.g.nodetree_no_default_maps) ~= 1 then
+    if vim.fn.exists(vim.g.nodetree_no_default_maps) == 1 then
         vim.keymap.set("n", "o", "<Plug>(nodetree-toggle-node)", { buffer = true })
         vim.keymap.set("n", "<cr>", "<Plug>(nodetree-execute-node)", { buffer = true })
         vim.keymap.set("n", "q", "<Plug>(nodetree-wipe-tree)", { buffer = true })

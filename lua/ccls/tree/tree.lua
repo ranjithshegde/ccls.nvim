@@ -1,5 +1,4 @@
 local Tree = {
-    increment = 1,
     maxid = -1,
     root = {},
     index = {},
@@ -33,7 +32,7 @@ end
 function Tree:update(...)
     local args = { ... }
 
-    if vim.fn.len(args) < 1 then
+    if vim.tbl_isempty(args) then
         ---@diagnostic disable-next-line: unused-local
         self.provider:getChildren(function(status, obj)
             self.provider:getTreeItem(function(...)
@@ -55,23 +54,22 @@ end
 --- Render the {tree}. This will replace the content of the buffer with the
 --- tree view. Clear the index, setting it to a list containing a guard
 --- value for index 0 (line numbers are one-based).
-function Tree.render(tree)
+function Tree:render()
     if vim.api.nvim_buf_get_option(0, "filetype") ~= "NodeTree" then
         return
     end
 
     local cursor = vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win())
-    tree.index = { -1 }
+    self.index = { -1 }
 
-    local text = tree.root:node_render(0)
-
+    local text = self.root:node_render(0)
     text = vim.split(text, "\n")
-    vim.opt_local.modifiable = true
 
-    vim.api.nvim_buf_set_lines(0, Tree.increment, Tree.increment, false, text)
+    vim.opt_local.modifiable = true
+    vim.api.nvim_buf_set_lines(0, 1, #text, false, text)
     vim.opt_local.modifiable = false
+
     vim.api.nvim_win_set_cursor(vim.api.nvim_get_current_win(), cursor)
-    Tree.increment = Tree.increment + 1
 end
 
 return Tree

@@ -20,13 +20,13 @@ local Node = {
 --     self.children = {}
 -- end
 
--- -- Insert a new node in the tree, internally represented by a unique progressive
--- -- integer identifier {id}. The node represents a certain {object} (children of
--- -- {parent}) belonging to a given {tree}, having an associated action to be
--- -- triggered on execution defined by the function object {exec}. If {collapsed}
--- -- is true the node will be rendered as collapsed in the view. If {lazy_open} is
--- -- true, the children of the node will be fetched when the node is expanded by
--- -- the user.
+--- Insert a new node in the tree, internally represented by a unique progressive
+--- integer identifier {id}. The node represents a certain {object} (children of
+--- {parent}) belonging to a given {tree}, having an associated action to be
+--- triggered on execution defined by the function object {exec}. If {collapsed}
+--- is true the node will be rendered as collapsed in the view. If {lazy_open} is
+--- true, the children of the node will be fetched when the node is expanded by
+--- the user.
 function Node:create(tree, object, treeItem, parent)
     local n = Node
     tree.maxid = tree.maxid + 1
@@ -79,26 +79,21 @@ function Node:node_render(level)
 
     local label = vim.split(self.tree_item.label, "\n")
 
-    -- vim.fn.writefile({ vim.g.ccls_lrepr .. " " .. table.concat(label, "\n") }, "/home/ranjith/l.txt", "a")
-    -- vim.g.ccls_lrepr = vim.g.ccls_lrepr + 1
-
-    local indices = vim.fn.range(vim.fn.len(label))
+    local indices = vim.fn.range(#label)
     for index, _ in ipairs(indices) do
         indices[index] = self
     end
     table.insert(self.tree.index, unpack(indices))
 
-    local repr = indent .. mark .. label[1]
+    local lines = {}
 
-    if label[2] then
-        print "Success"
-        repr = repr
-            .. table.concat(vim.tbl_map(function(_, l)
-                return "\n" .. indent .. " " .. l
-            end, require("ccls.tree.utils").list_unpack(label, 2)))
+    for i, v in ipairs(label) do
+        if i == 1 then
+            table.insert(lines, indent .. mark .. v)
+        else
+            table.insert(lines, indent .. v)
+        end
     end
-
-    local lines = { repr }
 
     if not self.collapsed then
         if self.lazy_open then
@@ -109,11 +104,7 @@ function Node:node_render(level)
 
             self.tree.provider:getChildren(callback, self.object)
         end
-        -- if vim.g.foo == 1 then
-        --     vim.g.ccls_ls = self
-        -- end
-        -- vim.g.foo = vim.g.foo + 1
-        for _, child in ipairs(self.children) do
+        for _, child in pairs(self.children) do
             table.insert(lines, child:node_render(level + 1))
         end
     end

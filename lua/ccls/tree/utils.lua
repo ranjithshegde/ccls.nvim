@@ -4,12 +4,7 @@ local utils = {}
 function utils.node_get_tree_item_cb(node, object, status, treeItem)
     if status == "success" then
         local newnode = require("ccls.tree.node"):create(node.tree, object, treeItem, node)
-        -- table.insert(node.children, newnode)
         node.children = vim.fn.add(node.children, newnode)
-        if vim.g.foo == 1 then
-            vim.g.ccls_ls = node
-        end
-        vim.g.foo = vim.g.foo + 1
         require("ccls.tree.tree").render(newnode.tree)
     end
 end
@@ -57,7 +52,7 @@ function utils.tree_set_root_cb(tree, object, status, treeItem)
     if status == "success" then
         tree.maxid = -1
         tree.root = require("ccls.tree.node"):create(tree, object, treeItem, {})
-        require("ccls.tree.tree").render(tree)
+        tree:render()
     end
 end
 
