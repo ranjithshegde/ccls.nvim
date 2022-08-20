@@ -34,7 +34,7 @@ local function jump(location)
     if vim.g.ccls_close_on_jump then
         vim.api.nvim_buf_delete(nodeTree_bufno, { force = true })
     end
-    vim.lsp.util.jump_to_location(location, nil, true)
+    vim.lsp.util.jump_to_location(location, require("ccls.protocol").offset_encoding or "utf-32", true)
 end
 
 --- Get the collapsibleState for a node. The root is returned expanded on

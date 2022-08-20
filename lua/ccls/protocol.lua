@@ -14,6 +14,7 @@ function protocol.nodeRequest(bufnr, method, params, handler)
     end
 
     if client then
+        protocol.offset_encoding = client.offset_encoding or "utf-32"
         client.request(method, params, lspHandler)
     else
         vim.notify("Ccls is not attached to this buffer", vim.log.levels.WARN, { title = "ccls.nvim" })
