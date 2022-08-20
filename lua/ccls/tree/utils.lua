@@ -5,7 +5,7 @@ function utils.node_get_tree_item_cb(node, object, status, treeItem)
     if status == "success" then
         local newnode = require "ccls.tree.node"(node.tree, object, treeItem, node)
         table.insert(node.children, newnode)
-        require("ccls.tree.tree").render(newnode.tree)
+        newnode.tree:render()
     end
 end
 

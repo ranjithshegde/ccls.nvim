@@ -116,10 +116,10 @@ require("ccls").setup {
         -- check :help vim.lsp.start for config options
         server = {
             name = "ccls", --String name
-            cmd = "/usr/bin/ccls", -- point to your binary, has to be string
-            args = {--[[Any args table]]
-            },
-            root_dir = vim.fs.dirname(vim.fs.find({ "compile_commands.json", ".git" }, { upward = true })[1]), -- or some other function
+            cmd = {"/usr/bin/ccls"}, -- point to your binary, has to be a table
+            args = {--[[Any args table]] },
+            offset_encoding = "utf-32", -- When cause problems if not declared
+            root_dir = vim.fs.dirname(vim.fs.find({ "compile_commands.json", ".git" }, { upward = true })[1]), -- or some other function that returns a string
         },
     },
 }

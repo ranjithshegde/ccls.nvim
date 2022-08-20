@@ -58,8 +58,16 @@ function ccls.setup(config)
                 name = { config.lsp.server.name, "string", false },
                 cmd = { config.lsp.server.cmd, "table", false },
                 args = { config.lsp.server.args, "table", true },
-                root_dir = { config.lsp.server.root_dir, "function", false },
+                offset_encoding = { config.lsp.server.offset_encoding, "string", true },
+                root_dir = { config.lsp.server.root_dir, "string", false },
             }
+            if not utils.tbl_haskey(config.lsp.server, false, "offset_encoding") then
+                vim.notify(
+                    "No offset_encoding encoding specified. If using multiple clients this can potentially cause problems",
+                    vim.log.levels.WARN,
+                    { title = "ccls.nvim" }
+                )
+            end
             vim.api.nvim_create_autocmd("FileType", {
                 pattern = config.filetypes or { "c", "cpp", "objc", "objcpp" },
                 group = vim.api.nvim_create_augroup("ccls_config", { clear = true }),

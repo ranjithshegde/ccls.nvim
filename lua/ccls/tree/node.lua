@@ -25,6 +25,9 @@ local function set_collapsed(node, collapsed)
     node.collapsed = collapsed == nil and not node.collapsed or collapsed
 end
 
+--- Return the string representation of the node. The {level} argument represents
+--- the depth level of the node in the tree and it is passed for convenience, to
+--- simplify the implementation and to avoid re-computing the depth.
 local function node_render(node, level)
     local indent = string.rep(" ", 2 * level)
     local mark = "• "
