@@ -34,6 +34,10 @@ local function setup_lspconfig(config, rules, diagnostics)
         offset_encoding = "utf-32",
         single_file_support = false,
     }
+    if not config then
+        require("lspconfig").ccls.setup(default)
+        return
+    end
     if not vim.tbl_isempty(config) then
         vim.tbl_extend("force", default, config)
     end
