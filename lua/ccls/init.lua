@@ -45,7 +45,7 @@ function ccls.setup(config)
 
     if ccls_assert(config.lsp) then
         if utils.tbl_haskey(config.lsp, false, "use_defaults") and config.lsp.use_defaults == true then
-            require("lspconfig").ccls.setup()
+            require("lspconfig").ccls.setup {}
             return
         end
         if utils.tbl_haskey(config.lsp, false, "lspconfig") then
