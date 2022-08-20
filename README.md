@@ -17,6 +17,95 @@ Features include:
 Soon to be added:
 Add floating previews for each nodes
 
+## ccls extensions
+
+`ccls` LSP has many off-spec commands/calls. This plugin supports the following
+
+### Quickfix
+
+The below functions return a quickfix list of items
+
+#### `$ccls/vars`
+
+Called via `:CclsVars kind` or `require("ccls").vars(kind)`
+
+#### `$ccls/member`
+
+Called via `require("ccls").member(kind)`.
+kind 4 = variables, 3 = functions, 2 = type
+
+Individual member calls can also be made via
+
+- `:CclsMember` for Variables
+- `:CclsMemberFunction` for functions
+- `:CclsMemberType` for types
+
+#### `$ccls/call`
+
+Called via `require("ccls").call(callee)`.
+true = outgoing calls, false = incoming calls
+Can also be called via
+
+- `:CclsIncomingCalls`
+- `:CclsOutgoingCalls`
+
+#### `$ccls/inheritance`
+
+Called via `require("ccls").inheritance(derived)`
+derived `true` for derived classes, `false` for base classes
+
+Can also be called via
+
+- `:CclsBase`
+- `:CclsDerived`
+
+### Sidebar or float
+
+The following functions are hierarchical and return either a sidebar or a
+floating window
+
+Each lua callback has a view option. View is a table with example `{type = "float"}` to use floating window.
+For vim commands it can be passed via `:CclsMemberHierarchy float`
+When omitted it uses a sidebar.
+
+Inside the window, use maps:
+
+- `o` to open a node under cursor.
+- `c` to close the node under cursor
+- `O` to toggle node under cursor
+- `CR` to jump to node under cursor
+- `q` To quit window
+
+#### `$ccls/member` hierarchy
+
+Called via `require("ccls").memberHierarchy(kind, view)`.
+kind 4 = variables, 3 = functions, 2 = type
+
+individual member calls can also be made via
+
+- `:CclsMemberHierarchy` for Variables
+- `:CclsMemberFunction` for functions
+- `:CclsMemberTyoe` for types
+
+#### `$ccls/call` hierarchy
+
+Called via `require("ccls").callHierarchy(callee)`.
+true = outgoing calls, false = incoming calls
+Can also be called via
+
+- `:CclsIncomingCallsHierarchy`
+- `:CclsOutgoingCallsHierarchy`
+
+#### `$ccls/inheritance` hierarchy
+
+Called via `require("ccls").inheritanceHierarchy(derived)`
+derived `true` for derived classes, `false` for base classes
+
+Can also be called via
+
+- `:CclsBaseHierarchy`
+- `:CclsDerivedHierarchy`
+
 ## Configuration
 
 Call `require("ccls").setup(config)` somewhere in your config
@@ -226,96 +315,8 @@ require("ccls").setup {
         },
     }
 ```
+
 </details>
-
-## ccls extensions
-
-`ccls` LSP has many off-spec commands/calls. This plugin supports the following
-
-### Quickfix
-
-The below functions return a quickfix list of items
-
-#### `$ccls/vars`
-
-Called via `:CclsVars kind` or `require("ccls").vars(kind)`
-
-#### `$ccls/member`
-
-Called via `require("ccls").member(kind)`.
-kind 4 = variables, 3 = functions, 2 = type
-
-Individual member calls can also be made via
-
-- `:CclsMember` for Variables
-- `:CclsMemberFunction` for functions
-- `:CclsMemberType` for types
-
-#### `$ccls/call`
-
-Called via `require("ccls").call(callee)`.
-true = outgoing calls, false = incoming calls
-Can also be called via
-
-- `:CclsIncomingCalls`
-- `:CclsOutgoingCalls`
-
-#### `$ccls/inheritance`
-
-Called via `require("ccls").inheritance(derived)`
-derived `true` for derived classes, `false` for base classes
-
-Can also be called via
-
-- `:CclsBase`
-- `:CclsDerived`
-
-### Sidebar or float
-
-The following functions are hierarchical and return either a sidebar or a
-floating window
-
-Each lua callback has a view option. View is a table with example `{type = "float"}` to use floating window.
-For vim commands it can be passed via `:CclsMemberHierarchy float`
-When omitted it uses a sidebar.
-
-Inside the window, use maps:
-
-- `o` to open a node under cursor.
-- `c` to close the node under cursor
-- `O` to toggle node under cursor
-- `CR` to jump to node under cursor
-- `q` To quit window
-
-#### `$ccls/member` hierarchy
-
-Called via `require("ccls").memberHierarchy(kind, view)`.
-kind 4 = variables, 3 = functions, 2 = type
-
-individual member calls can also be made via
-
-- `:CclsMemberHierarchy` for Variables
-- `:CclsMemberFunction` for functions
-- `:CclsMemberTyoe` for types
-
-#### `$ccls/call` hierarchy
-
-Called via `require("ccls").callHierarchy(callee)`.
-true = outgoing calls, false = incoming calls
-Can also be called via
-
-- `:CclsIncomingCallsHierarchy`
-- `:CclsOutgoingCallsHierarchy`
-
-#### `$ccls/inheritance` hierarchy
-
-Called via `require("ccls").inheritanceHierarchy(derived)`
-derived `true` for derived classes, `false` for base classes
-
-Can also be called via
-
-- `:CclsBaseHierarchy`
-- `:CclsDerivedHierarchy`
 
 <details>
     <summary>Notes</summary>
@@ -327,7 +328,7 @@ lua rewrite of Martin Pilia's `vim-yggdrasil`. At some point in the future I
 will rewrite the logic to utilize lua-ecosystem features and make it a general
 purpose Tree browser.
 
-For now, it works exactly as intended but is hacky. The code structure is as follows.
+For now, it works exactly as intended but is not easy read. The code structure is as follows.
 
 - `ccls/provider.lua` contains functions to make LSP results compatible with
   NodeTree.
@@ -336,5 +337,10 @@ For now, it works exactly as intended but is hacky. The code structure is as fol
   - `ccls/tree/node.lua` has the node class reduced to a single node generator call
     to avoid caching problems. Will be modularized when I rewrite the logic.
   - `ccls/tree/utils.lua` has other function calls not part of `tree` or `node` class but necessary
+
+## Tests
+
+This will take some time. Need to figure out how to run an lsp for testing.
+I will look through other plugins to see how they handle it. No promise on time.
 
 </details>
