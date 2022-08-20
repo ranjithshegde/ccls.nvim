@@ -23,6 +23,85 @@ local function ccls_assert(table)
     return type(table) == "table" and not vim.tbl_isempty(table)
 end
 
+local function setup_lspconfig(config, rules, diagnostics)
+    local default = {
+        cmd = { "ccls" },
+        filetypes = { "c", "cpp", "objc", "objcpp" },
+        root_dir = function(fname)
+            return require("lspconfig.util").root_pattern("compile_commands.json", "compile_flags.txt", ".git")(fname)
+                or require("lspconfig.util").find_git_ancestor(fname)
+        end,
+        offset_encoding = "utf-32",
+        single_file_support = false,
+    }
+    if not vim.tbl_isempty(config) then
+        vim.tbl_extend("force", default, config)
+    end
+
+    if rules and not vim.tbl_isempty(rules) then
+        local on_init = function(client, bufnr)
+            local sc = client.server_capabilities
+            for k, v in pairs(rules) do
+                if v == true then
+                    sc[k] = false
+                end
+            end
+        end
+        default.on_init = on_init
+    end
+
+    if diagnostics == true then
+        ---@diagnostic disable-next-line: unused-vararg
+        local nilfunc = function(...)
+            return nil
+        end
+        if not default.handlers then
+            default.handlers = {
+                ["textDocument/publishDiagnostics"] = nilfunc,
+            }
+        else
+            default.handlers["textDocument/publishDiagnostics"] = nilfunc
+        end
+    end
+
+    require("lspconfig").ccls.setup(default)
+end
+
+local function setup_server(config, rules, diagnostics)
+    if rules and not vim.tbl_isempty(rules) then
+        local on_init = function(client, bufnr)
+            local sc = client.server_capabilities
+            for k, v in pairs(rules) do
+                if v == true then
+                    sc[k] = false
+                end
+            end
+        end
+        config.on_init = on_init
+    end
+
+    if diagnostics == true then
+        ---@diagnostic disable-next-line: unused-vararg
+        local nilfunc = function(...)
+            return nil
+        end
+        if not config.handlers then
+            config.handlers = {
+                ["textDocument/publishDiagnostics"] = nilfunc,
+            }
+        else
+            config.handlers["textDocument/publishDiagnostics"] = nilfunc
+        end
+    end
+    vim.api.nvim_create_autocmd("FileType", {
+        pattern = config.filetypes or { "c", "cpp", "objc", "objcpp" },
+        group = vim.api.nvim_create_augroup("ccls_config", { clear = true }),
+        callback = function()
+            vim.lsp.start(config)
+        end,
+    })
+end
+
 function ccls.setup(config)
     if not ccls_assert(config) then
         return
@@ -45,14 +124,20 @@ function ccls.setup(config)
 
     if ccls_assert(config.lsp) then
         if utils.tbl_haskey(config.lsp, false, "use_defaults") and config.lsp.use_defaults == true then
-            require("lspconfig").ccls.setup {}
+            setup_lspconfig()
             return
         end
         if utils.tbl_haskey(config.lsp, false, "lspconfig") then
             vim.validate { lspconfig = { config.lsp.lspconfig, "table" } }
-            require("lspconfig").ccls.setup(config.lsp.lspconfig)
+
+            setup_lspconfig(
+                config.lsp.lspconfig,
+                config.lsp.disable_capabilities or {},
+                config.lsp.disable_diagnostics or false
+            )
             return
         end
+
         if utils.tbl_haskey(config.lsp, false, "server") then
             vim.validate {
                 name = { config.lsp.server.name, "string", false },
@@ -61,22 +146,14 @@ function ccls.setup(config)
                 offset_encoding = { config.lsp.server.offset_encoding, "string", true },
                 root_dir = { config.lsp.server.root_dir, "string", false },
             }
-            if not utils.tbl_haskey(config.lsp.server, false, "offset_encoding") then
-                vim.notify(
-                    "No offset_encoding encoding specified. If using multiple clients this can potentially cause problems",
-                    vim.log.levels.WARN,
-                    { title = "ccls.nvim" }
-                )
-            end
-            vim.api.nvim_create_autocmd("FileType", {
-                pattern = config.filetypes or { "c", "cpp", "objc", "objcpp" },
-                group = vim.api.nvim_create_augroup("ccls_config", { clear = true }),
-                callback = function()
-                    vim.lsp.start(config.lsp.server)
-                end,
-            })
+            setup_server(
+                config.lsp.server,
+                config.lsp.disable_capabilities or {},
+                config.lsp.disable_diagnostics or false
+            )
             return
         end
+
         vim.notify(
             [[Lsp config: Neither `use_defaults` nor server configurations have been specified.
             This will assume that Lsp configuration for ccls has been handled by the user elsewhere

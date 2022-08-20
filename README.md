@@ -129,6 +129,40 @@ If neither `use_defaults` bool, `lspconfig` table or `server` table are
 supplied, the plugin assumes you have setup ccls LSP elsewhere in your config.
 This is the default behaviour
 
+### Co-existance with clangd
+
+If you wish to use clangd alongside ccls and want to avoid conflicting parallel
+requests, you can use the following table to disable specific capabilities.
+
+_Warning:_ Upstream (neovim) maintainers label the process of disabling
+capabilities as _hacky_. Until there is a mechanism in-place upstream that
+uses predicates to select clients for calls, this is the best solution.
+
+This method uses both disabling certain capabilites and passing `nil` handlers
+to others. This makes running two language servers more resource effecient.
+
+use only the following options. If you do not wish to disable said option,
+either set it to false or simply leave out that option
+
+```lua
+require("ccls").setup {
+    lsp = {
+        disable_capabilities = {
+            completionProvider = true,
+            documentFormattingProvider = true,
+            documentRangeFormattingProvider = true,
+            documentHighlightProvider = true,
+            documentSymbolProvider = true,
+            workspaceSymbolProvider = true,
+            renameProvider = true,
+            hoverProvider = true,
+            codeActionProvider = true,
+        },
+        disable_diagnostics = true
+    },
+}
+```
+
 ## ccls extensions
 
 `ccls` LSP has many off-spec commands/calls. This plugin supports the following
