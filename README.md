@@ -1,8 +1,9 @@
 # ccls.nvim
 
-**_ This plugin is a work in progress. It works but is still missing some tests. Use at your own risk_**
+**This plugin is a work in progress. It works but is still missing some tests. Use at your own risk**
 
-This is a lua rewrite of vim-ccls by Martin Pilia
+Inspired by [vim-ccls](https://github.com/m-pilia/vim-ccls) by Martin Pilia.
+The entire tree-browser part of the code is a lua rewrite of [vim-yggdrasil](https://github.com/m-pilia/vim-yggdrasil) by Martin Pilia.
 
 Features include:
 
@@ -72,7 +73,7 @@ require("ccls").setup({filetypes = {"c", "cpp", "opencl"}})
 You can optionally setup LSP through the plugin.
 There are two methods.
 
-Using lspcofing:
+**Using lspcofing:**
 This requires that you have `nvim-lspconfig` plugin installed and (already
 loaded if lazy-loading). Pass the appropriate configurations like this
 (pseudo_code)
@@ -98,8 +99,9 @@ Its also possible to entirely use lspconfig defaults like this:
 require("ccls").setup({lsp = {use_defaults = true}})
 ```
 
-If using nvim nightly, you can use `vim.lsp.start()` call instead which has the
-benifit of reusing the same client on files within the same workspace.
+**Using direct call:**
+If using _nvim nightly_, you can use `vim.lsp.start()` call instead which has the
+benefit of reusing the same client on files within the same workspace.
 
 To use that, pass this in your config, without supplying the keys `use_defaults`
 or `lspconfig`
@@ -120,7 +122,7 @@ require("ccls").setup {
 ```
 
 If neither `use_defaults` bool, `lspconfig` table or `server` table are
-supplied, the plugin assumes you have setup ccls LSP eslewhere in your config
+supplied, the plugin assumes you have setup ccls LSP elsewhere in your config
 
 ## ccls extensions
 
@@ -139,11 +141,11 @@ Called via `:CclsVars kind` or `require("ccls").vars(kind)`
 Called via `require("ccls").member(kind)`.
 kind 4 = variables, 3 = functions, 2 = type
 
-individual member calls can also be made via
+Individual member calls can also be made via
 
 - `:CclsMember` for Variables
 - `:CclsMemberFunction` for functions
-- `:CclsMemberTyoe` for types
+- `:CclsMemberType` for types
 
 #### `$ccls/call`
 
@@ -210,3 +212,22 @@ Can also be called via
 
 - `:CclsBaseHierarchy`
 - `:CclsDerivedHierarchy`
+
+## NodeTree
+
+As of now, the `NodeTree` filetype which renders a tree structure is a direct
+lua rewrite of Martin Pilia's `vim-yggdrasil`. At some point in the future I
+will rewrite the logic to utilize lua-ecosystem features and make it a general
+purpose Tree browser.
+
+For now, it works exactly as intended but is hacky. The code structure is as follows.
+
+- `ccls/provider.lua` contains functions to make LSP results compatible with
+  NodeTree.
+- `ccls/tree` Folder has the luafied `yggdrasil` tree code
+  - `ccls/tree/tree.lua` has the Tree class.
+  - `ccls/tree/node.lua` has the node class reduced to a single node generator
+    call. Since lua caches modules, this cant be modularized. When attempted
+    to modularize, results in stack overflow. Will be addressed when I rewrite
+    the logic.
+  - `ccls/tree/utils.lua` has other function calls not part of `tree` or `node` class but necessary

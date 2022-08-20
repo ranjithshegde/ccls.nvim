@@ -1,15 +1,15 @@
 local cmd = vim.api.nvim_create_user_command
 
 cmd("CclsVars", function(opts)
-    require("ccls").var(opts.args)
+    require("ccls").vars(opts.args and tonumber(opts.args))
 end, { nargs = "*", desc = "ccls workspace variables" })
 
 cmd("CclsIncomingCalls", function()
-    require("ccls").call(true)
+    require("ccls").call(false)
 end, { desc = "ccls incoming calls" })
 
 cmd("CclsOutgoingCalls", function()
-    require("ccls").call(false)
+    require("ccls").call(true)
 end, { desc = "ccls outgoing calls" })
 
 cmd("CclsBase", function()
@@ -33,11 +33,11 @@ cmd("CclsMemberType", function()
 end, { desc = "ccls member types" })
 
 cmd("CclsIncomingCallsHeirarchy", function(opts)
-    require("ccls").callHeirarchy(true, { type = opts.args })
+    require("ccls").callHeirarchy(false, { type = opts.args })
 end, { nargs = "*", desc = "ccls incoming calls heirarchy" })
 
 cmd("CclsOutgoingCallsHeirarchy", function(opts)
-    require("ccls").callHeirarchy(false, { type = opts.args })
+    require("ccls").callHeirarchy(true, { type = opts.args })
 end, { nargs = "*", desc = "ccls outgoing calls heirarcy" })
 
 cmd("CclsBaseHierarchy", function(opts)

@@ -79,8 +79,8 @@ function ccls.setup(config)
     end
 end
 
-function ccls.var(kind)
-    require("ccls.protocol").request("$ccls/vars", { kind = kind or 0 }, false)
+function ccls.vars(kind)
+    require("ccls.protocol").request("$ccls/vars", { kind = kind or 1 }, false)
 end
 
 function ccls.call(callee)
