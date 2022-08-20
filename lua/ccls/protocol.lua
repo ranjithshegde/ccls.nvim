@@ -48,7 +48,7 @@ end
 --- Callback to create a tree view.
 local function handle_tree(bufnr, method, extra_params, view, data)
     if type(data) ~= "table" then
-        vim.notify("No heirarchy for the object under the cursor", nil, { title = "ccls.nvim" })
+        vim.notify("No hierarchy for the object under the cursor", nil, { title = "ccls.nvim" })
     end
 
     local win_config = require("ccls").win_config

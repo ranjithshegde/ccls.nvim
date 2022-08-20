@@ -44,7 +44,6 @@ defaults = {
         },
     },
     filetypes = {"c", "cpp", "objc", "objcpp"},
-    lsp = {}
 }
 ```
 
@@ -70,7 +69,9 @@ require("ccls").setup({filetypes = {"c", "cpp", "opencl"}})
 
 ### Lsp
 
-You can optionally setup LSP through the plugin.
+You can optionally setup LSP through the plugin. _By default no setup calls are
+initiated_.
+
 There are two methods.
 
 **Using lspcofing:**
@@ -86,13 +87,14 @@ loaded if lazy-loading). Pass the appropriate configurations like this
         init_options = { cache = {
             directory = vim.fs.normalize "~/.cache/ccls/",
         } },
-        on_attach = require("my.attach").function,
+        on_attach = require("my.attach").func,
         capabilities = my_caps_table_or_func
     }
     require("ccls").setup { lsp = { lspconfig = server_config } }
 ```
 
-Any option omitted will use `lspconfig` defaults
+Any option omitted will use `lspconfig` defaults.
+
 Its also possible to entirely use lspconfig defaults like this:
 
 ```lua
@@ -104,7 +106,9 @@ If using _nvim nightly_, you can use `vim.lsp.start()` call instead which has th
 benefit of reusing the same client on files within the same workspace.
 
 To use that, pass this in your config, without supplying the keys `use_defaults`
-or `lspconfig`
+or `lspconfig`.
+
+**WARNING:** Requires `nvim nightly` or `nvim 0.8`
 
 ```lua
 require("ccls").setup {
@@ -122,7 +126,8 @@ require("ccls").setup {
 ```
 
 If neither `use_defaults` bool, `lspconfig` table or `server` table are
-supplied, the plugin assumes you have setup ccls LSP elsewhere in your config
+supplied, the plugin assumes you have setup ccls LSP elsewhere in your config.
+This is the default behaviour
 
 ## ccls extensions
 
@@ -168,11 +173,11 @@ Can also be called via
 
 ### Sidebar or float
 
-The following functions are heirarchical and return either a sidebar or a
+The following functions are hierarchical and return either a sidebar or a
 floating window
 
 Each lua callback has a view option. View is a table with example `{type = "float"}` to use floating window.
-For vim commands it can be passed via `:CclsMemberHeirarcy float`
+For vim commands it can be passed via `:CclsMemberHierarchy float`
 When omitted it uses a sidebar.
 
 Inside the window, use maps:
@@ -183,29 +188,29 @@ Inside the window, use maps:
 - `CR` to jump to node under cursor
 - `q` To quit window
 
-#### `$ccls/member` heirarchy
+#### `$ccls/member` hierarchy
 
-Called via `require("ccls").memberHeirarchy(kind, view)`.
+Called via `require("ccls").memberHierarchy(kind, view)`.
 kind 4 = variables, 3 = functions, 2 = type
 
 individual member calls can also be made via
 
-- `:CclsMemberHeirarcy` for Variables
+- `:CclsMemberHierarchy` for Variables
 - `:CclsMemberFunction` for functions
 - `:CclsMemberTyoe` for types
 
-#### `$ccls/call` heirarchy
+#### `$ccls/call` hierarchy
 
-Called via `require("ccls").callHeirarchy(callee)`.
+Called via `require("ccls").callHierarchy(callee)`.
 true = outgoing calls, false = incoming calls
 Can also be called via
 
-- `:CclsIncomingCallsHeirarchy`
-- `:CclsOutgoingCallsHeirarchy`
+- `:CclsIncomingCallsHierarchy`
+- `:CclsOutgoingCallsHierarchy`
 
-#### `$ccls/inheritance` heirarcy
+#### `$ccls/inheritance` hierarchy
 
-Called via `require("ccls").inheritanceHeirarchy(derived)`
+Called via `require("ccls").inheritanceHierarchy(derived)`
 derived `true` for derived classes, `false` for base classes
 
 Can also be called via
@@ -226,8 +231,6 @@ For now, it works exactly as intended but is hacky. The code structure is as fol
   NodeTree.
 - `ccls/tree` Folder has the luafied `yggdrasil` tree code
   - `ccls/tree/tree.lua` has the Tree class.
-  - `ccls/tree/node.lua` has the node class reduced to a single node generator
-    call. Since lua caches modules, this cant be modularized. When attempted
-    to modularize, results in stack overflow. Will be addressed when I rewrite
-    the logic.
+  - `ccls/tree/node.lua` has the node class reduced to a single node generator call
+    to avoid caching problems. Will be modularized when I rewrite the logic.
   - `ccls/tree/utils.lua` has other function calls not part of `tree` or `node` class but necessary
