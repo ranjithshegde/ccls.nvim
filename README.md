@@ -2,7 +2,25 @@
 
 [ccls_demo.webm](https://user-images.githubusercontent.com/10258296/185764424-45945b84-f397-4fdf-87d4-abbdaed8a0fc.webm)
 
-**This plugin is only tested by users and not automated tests**
+- [ccls extensions](#ccls-extensions)
+  - [Quickfix](#quickfix)
+    - [`$ccls/vars`](#cclsvars)
+    - [`$ccls/member`](#cclsmember)
+    - [`$ccls/call`](#cclscall)
+    - [`$ccls/inheritance`](#cclsinheritance)
+  - [Sidebar or float](#sidebar-or-float)
+    - [`$ccls/member` hierarchy](#cclsmember-hierarchy)
+    - [`$ccls/call` hierarchy](#cclscall-hierarchy)
+    - [`$ccls/inheritance` hierarchy](#cclsinheritance-hierarchy)
+- [Configuration](#configuration)
+  - [Window configuration](#window-configuration)
+  - [Filetypes](#filetypes)
+  - [Lsp](#lsp)
+  - [Co-existance with clangd](#co-existance-with-clangd)
+- [NodeTree](#nodetree)
+- [Tests](#tests)
+
+**This plugin is only tested by users and not automated tests.**
 **Its features are still a work in progress. They function as intended but the
 API and function signatures may change. Dont get too attached to these**
 
@@ -329,7 +347,7 @@ require("ccls").setup {
 
 As of now, the `NodeTree` filetype which renders a tree structure is a direct
 lua rewrite of Martin Pilia's `vim-yggdrasil`. At some point in the future I
-will rewrite the logic to utilize more lua-ecosystem features and make it 
+will rewrite the logic to utilize more lua-ecosystem features and make it
 a general purpose Tree browser.
 
 For now, it works exactly as intended but is not easy read. The code structure is as follows.
