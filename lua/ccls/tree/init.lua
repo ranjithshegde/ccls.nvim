@@ -1,12 +1,7 @@
 local nodeTree = {}
 
---- Turns the current buffer into an Yggdrasil tree view. Tree data is retrieved
---- from the given {provider}, and the state of the tree is stored in a
---- buffer-local variable called b:yggdrasil_tree.
----
---- The {bufnr} stores the buffer number of the view, {maxid} is the highest
---- known internal identifier of the nodes. The {index} is a list that
---- maps line numbers to nodes.
+--- Generates a NodeTree buffer to view the generated AST. Tree data is retrieved
+--- from the given {provider}.
 function nodeTree.init(provider, bufnr)
     local t = require("ccls.tree.tree"):new(provider, bufnr)
 

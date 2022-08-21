@@ -13,8 +13,6 @@ function Tree:new(provider, bufnr)
 end
 
 --- Expand or collapse the node under cursor, and render the tree.
---- Please refer to *s:node_set_collapsed()* for details about the
---- arguments and behaviour.
 function Tree:set_collapsed_under_cursor(collapsed)
     local node = require("ccls.tree.utils").get_node_under_cursor(self)
     node.set_collapsed(node, collapsed)
