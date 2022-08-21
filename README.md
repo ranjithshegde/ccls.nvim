@@ -1,5 +1,18 @@
 # ccls.nvim
 
+A neovim plugin to configure ccls language server and use its extensions.
+This plugin offers a tree-browser structure to parse the AST provided by ccls
+extensions and to quickly navigate to them.
+
+These AST features include:
+
+- member functions/variables of an object
+- base and derived hierarchy of a class
+- call hierarchy for a function.
+- sturcts and variables of the same type in the project
+
+There are some additional functionalities, follow the README for them.
+
 [ccls_demo.webm](https://user-images.githubusercontent.com/10258296/185764424-45945b84-f397-4fdf-87d4-abbdaed8a0fc.webm)
 
 - [ccls extensions](#ccls-extensions)
