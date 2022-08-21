@@ -1,8 +1,11 @@
 # ccls.nvim
 
 A neovim plugin to configure ccls language server and use its extensions.
-This plugin offers a tree-browser structure to parse the AST provided by ccls
-extensions and to quickly navigate to them.
+[ccls](https://github.com/MaskRay/ccls) is a language server for `c`, `cpp` and variants that offers comparable
+on-speec features as `clangd` along with a many extensions.
+
+This plugin offers a tree-browser structure to parse the AST provided by [ccls
+extensions](https://github.com/MaskRay/ccls/wiki/LSP-Extensions) and to quickly navigate to them.
 
 These AST features include:
 
@@ -204,7 +207,7 @@ initiated_.
 There are two methods.
 
 **Using lspcofing:**
-This requires that you have `nvim-lspconfig` plugin installed and (already
+This requires that you have [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig) plugin installed (and already
 loaded if lazy-loading). Pass the appropriate configurations like this.
 
 <details>
