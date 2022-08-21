@@ -23,89 +23,6 @@ local function ccls_assert(table)
     return type(table) == "table" and not vim.tbl_isempty(table)
 end
 
-local function setup_lspconfig(config, rules, diagnostics)
-    local default = {
-        cmd = { "ccls" },
-        filetypes = { "c", "cpp", "objc", "objcpp" },
-        root_dir = function(fname)
-            return require("lspconfig.util").root_pattern("compile_commands.json", "compile_flags.txt", ".git")(fname)
-                or require("lspconfig.util").find_git_ancestor(fname)
-        end,
-        offset_encoding = "utf-32",
-        single_file_support = false,
-    }
-    if not config then
-        require("lspconfig").ccls.setup(default)
-        return
-    end
-    if not vim.tbl_isempty(config) then
-        vim.tbl_extend("force", default, config)
-    end
-
-    if rules and not vim.tbl_isempty(rules) then
-        local on_init = function(client, bufnr)
-            local sc = client.server_capabilities
-            for k, v in pairs(rules) do
-                if v == true then
-                    sc[k] = false
-                end
-            end
-        end
-        default.on_init = on_init
-    end
-
-    if diagnostics == true then
-        ---@diagnostic disable-next-line: unused-vararg
-        local nilfunc = function(...)
-            return nil
-        end
-        if not default.handlers then
-            default.handlers = {
-                ["textDocument/publishDiagnostics"] = nilfunc,
-            }
-        else
-            default.handlers["textDocument/publishDiagnostics"] = nilfunc
-        end
-    end
-
-    require("lspconfig").ccls.setup(default)
-end
-
-local function setup_server(config, rules, diagnostics)
-    if rules and not vim.tbl_isempty(rules) then
-        local on_init = function(client, bufnr)
-            local sc = client.server_capabilities
-            for k, v in pairs(rules) do
-                if v == true then
-                    sc[k] = false
-                end
-            end
-        end
-        config.on_init = on_init
-    end
-
-    if diagnostics == true then
-        ---@diagnostic disable-next-line: unused-vararg
-        local nilfunc = function(...)
-            return nil
-        end
-        if not config.handlers then
-            config.handlers = {
-                ["textDocument/publishDiagnostics"] = nilfunc,
-            }
-        else
-            config.handlers["textDocument/publishDiagnostics"] = nilfunc
-        end
-    end
-    vim.api.nvim_create_autocmd("FileType", {
-        pattern = config.filetypes or { "c", "cpp", "objc", "objcpp" },
-        group = vim.api.nvim_create_augroup("ccls_config", { clear = true }),
-        callback = function()
-            vim.lsp.start(config)
-        end,
-    })
-end
-
 function ccls.setup(config)
     if not ccls_assert(config) then
         return
@@ -127,33 +44,44 @@ function ccls.setup(config)
     end
 
     if ccls_assert(config.lsp) then
+        local handles = {}
         if utils.tbl_haskey(config.lsp, false, "use_defaults") and config.lsp.use_defaults == true then
-            setup_lspconfig()
+            require("ccls.protocol").setup_lsp "lspconfig"
             return
         end
+
+        if config.lsp.disable_diagnostics then
+            table.insert(handles, "textDocument/publishDiagnostics")
+        end
+        if config.lsp.disable_signature then
+            table.insert(handles, "textDocument/signatureHelp")
+        end
+
         if utils.tbl_haskey(config.lsp, false, "lspconfig") then
             vim.validate { lspconfig = { config.lsp.lspconfig, "table" } }
 
-            setup_lspconfig(
+            require("ccls.protocol").setup_lsp(
+                "lspconfig",
                 config.lsp.lspconfig,
                 config.lsp.disable_capabilities or {},
-                config.lsp.disable_diagnostics or false
+                handles
             )
             return
         end
 
         if utils.tbl_haskey(config.lsp, false, "server") then
             vim.validate {
-                name = { config.lsp.server.name, "string", false },
-                cmd = { config.lsp.server.cmd, "table", false },
+                name = { config.lsp.server.name, "string", true },
+                cmd = { config.lsp.server.cmd, "table", true },
                 args = { config.lsp.server.args, "table", true },
                 offset_encoding = { config.lsp.server.offset_encoding, "string", true },
-                root_dir = { config.lsp.server.root_dir, "string", false },
+                root_dir = { config.lsp.server.root_dir, "string", true },
             }
-            setup_server(
+            require("ccls.protocol").setup_lsp(
+                "server",
                 config.lsp.server,
                 config.lsp.disable_capabilities or {},
-                config.lsp.disable_diagnostics or false
+                handles
             )
             return
         end
