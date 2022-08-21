@@ -75,12 +75,12 @@ end
 function provider:getChildren(callback, ...)
     local args = { ... }
 
-    if vim.fn.len(args) < 1 then
+    if vim.tbl_isempty(args) then
         callback("success", self.root)
         return
     end
 
-    if vim.tbl_contains(vim.fn.keys(args[1]), "children") and #vim.tbl_keys(args[1].children) > 0 then
+    if vim.tbl_contains(vim.tbl_keys(args[1]), "children") and #vim.tbl_keys(args[1].children) > 0 then
         callback("success", args[1].children)
         return
     end

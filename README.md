@@ -2,7 +2,9 @@
 
 [ccls_demo.webm](https://user-images.githubusercontent.com/10258296/185764424-45945b84-f397-4fdf-87d4-abbdaed8a0fc.webm)
 
-**This plugin is a work in progress. It works but is still missing some tests. Use at your own risk**
+**This plugin is only tested by users and not automated tests**
+**Its features are still a work in progress. They function as intended but the
+API and function signatures may change. Dont get too attached to these**
 
 Inspired by [vim-ccls](https://github.com/m-pilia/vim-ccls) by Martin Pilia.
 The entire tree-browser part of the code is a lua rewrite of [vim-yggdrasil](https://github.com/m-pilia/vim-yggdrasil) by Martin Pilia.
@@ -225,7 +227,7 @@ require("ccls").setup {
             name = "ccls", --String name
             cmd = {"/usr/bin/ccls"}, -- point to your binary, has to be a table
             args = {--[[Any args table]] },
-            offset_encoding = "utf-32", -- Can cause problems if not declared
+            offset_encoding = "utf-32", -- default value set by plugin
             root_dir = vim.fs.dirname(vim.fs.find({ "compile_commands.json", ".git" }, { upward = true })[1]), -- or some other function that returns a string
             --on_attach = your_func,
             --capabilites = your_table/func
@@ -273,6 +275,7 @@ require("ccls").setup {
             codeActionProvider = true,
         },
         disable_diagnostics = true
+        disable_signature = true,
     },
 }
 ```
@@ -312,6 +315,7 @@ require("ccls").setup {
                 codeActionProvider = true,
             },
             disable_diagnostics = true,
+            disable_signature = true,
         },
     }
 ```
@@ -325,8 +329,8 @@ require("ccls").setup {
 
 As of now, the `NodeTree` filetype which renders a tree structure is a direct
 lua rewrite of Martin Pilia's `vim-yggdrasil`. At some point in the future I
-will rewrite the logic to utilize lua-ecosystem features and make it a general
-purpose Tree browser.
+will rewrite the logic to utilize more lua-ecosystem features and make it 
+a general purpose Tree browser.
 
 For now, it works exactly as intended but is not easy read. The code structure is as follows.
 

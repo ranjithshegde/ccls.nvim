@@ -111,4 +111,92 @@ function protocol.request(method, config, hierarchy, view)
     end
 end
 
+local function disable_capabilities(rules)
+    local on_init = function(client)
+        local sc = client.server_capabilities
+        for k, v in pairs(rules) do
+            if v == true then
+                if sc[k] then
+                    sc[k] = false
+                else
+                    vim.notify(
+                        "Capabilitiy " .. k .. " is not available or not valid",
+                        vim.log.levels.WARN,
+                        { title = "ccls.nvim" }
+                    )
+                end
+            end
+        end
+    end
+    return on_init
+end
+
+local function nil_handlers(config, handles)
+    ---@diagnostic disable-next-line: unused-vararg
+    local nilfunc = function(...)
+        return nil
+    end
+    if not config.handlers then
+        config.handlers = {}
+    end
+    for _, v in ipairs(handles) do
+        config.handlers[v] = nilfunc
+    end
+end
+
+local default_config = {
+    cmd = { "ccls" },
+    filetypes = { "c", "cpp", "objc", "objcpp" },
+    offset_encoding = "utf-32",
+    single_file_support = false,
+}
+
+function protocol.setup_lsp(type, config, rules, disables)
+    if not config or not config.root_dir then
+        if type ~= "lspconfig" then
+            default_config.root_dir = vim.fs.dirname(
+                vim.fs.find({ "compile_commands.json", "compile_flags.txt", ".git" }, { upward = true })[1]
+            )
+        else
+            default_config.root_dir = function(fname)
+                return require("lspconfig.util").root_pattern("compile_commands.json", "compile_flags.txt", ".git")(
+                    fname
+                ) or require("lspconfig.util").find_git_ancestor(fname)
+            end
+        end
+    end
+
+    if not config then
+        require("lspconfig").ccls.setup(default_config)
+        return
+    end
+
+    if not vim.tbl_isempty(config) then
+        default_config = vim.tbl_extend("force", default_config, config)
+    end
+
+    if rules and not vim.tbl_isempty(rules) then
+        default_config.on_init = disable_capabilities(rules)
+    end
+
+    if disables and not vim.tbl_isempty(rules) then
+        nil_handlers(default_config, disables)
+    end
+
+    if type == "lspconfig" then
+        require("lspconfig").ccls.setup(default_config)
+        return
+    end
+
+    if type == "server" then
+        vim.api.nvim_create_autocmd("FileType", {
+            pattern = default_config.filetypes or { "c", "cpp", "objc", "objcpp" },
+            group = vim.api.nvim_create_augroup("ccls_config", { clear = true }),
+            callback = function()
+                vim.lsp.start(default_config)
+            end,
+        })
+    end
+end
+
 return protocol
