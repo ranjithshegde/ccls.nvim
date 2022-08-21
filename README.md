@@ -305,13 +305,18 @@ require("ccls").setup {
             hoverProvider = true,
             codeActionProvider = true,
         },
-        disable_diagnostics = true
+        disable_diagnostics = true,
         disable_signature = true,
     },
 }
 ```
 
 </details>
+
+**Note:** For these disabling mechanisms to be attached to the initiated/running ccls
+insttance, you will have to configure the server through the plugin either using
+`lsp = {lspconfig = {my_config_table}}` or `lsp={server={my_0.8.config}}` as
+descried earlier.
 
 <details>
     <summary>Here is a complete setup example from my config (using nvim 0.8 features) </summary>
