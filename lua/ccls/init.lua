@@ -70,6 +70,14 @@ function ccls.setup(config)
         end
 
         if utils.tbl_haskey(config.lsp, false, "server") then
+            if vim.fn.has "nvim-0.8" ~= 1 then
+                vim.notify(
+                    [[Attempting to set key `config.lsp.server`. This feature requires nvim>= 0.8. Either upadte to nvim-nightly or use config.lsp.lspconfig]],
+                    vim.log.levels.ERROR,
+                    { title = "ccls.nvim" }
+                )
+                return
+            end
             vim.validate {
                 name = { config.lsp.server.name, "string", true },
                 cmd = { config.lsp.server.cmd, "table", true },
