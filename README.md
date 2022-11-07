@@ -49,6 +49,7 @@ Features include:
 - Setup lsp either via `lspconfig` or built-in `vim.lsp.start()`
 - Use treesitter to highlight NodeTree window
 - Update tagstack on jump to new node
+- Setup codelens autocmds
 
 Soon to be added:
 Add floating previews for each nodes
@@ -153,8 +154,6 @@ The default values are:
 
 ```lua
 defaults = {
--- Lsp is not setup by default to avoid overriding user's personal configurations.
--- Look ahead for instructions on using this plugin for ccls setup
     win_config = {
         -- Sidebar configuration
         sidebar = {
@@ -176,6 +175,15 @@ defaults = {
         },
     },
     filetypes = {"c", "cpp", "objc", "objcpp"},
+
+    -- Lsp is not setup by default to avoid overriding user's personal configurations.
+    -- Look ahead for instructions on using this plugin for ccls setup
+    lsp = {
+        codelens = {
+            enabled = false,
+            events = {"BufEnter", "BufWritePost"}
+        }
+    }
 }
 ```
 
@@ -278,6 +286,31 @@ If neither `use_defaults`, `lspconfig` nor `server` are set,
 then the plugin assumes you have setup ccls LSP elsewhere in your config.
 This is the default behaviour.
 
+#### Codelens
+
+ccls has minimal codelens capabilites. If you are not familiar with codenels, see [Lsp spec
+documentation](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_codeLens).
+According to ccls server capabilities tree, ccls supports `resolveProvider`
+option of codelens.
+
+To enable codelens, set `lsp = { codelens = {enable = true}}` in the config.
+It is necessary to setup autocmds to refresh codelens. The default events are
+`BufEnter` and `BufWritePost`. You can customize it this way:
+
+```lua
+require('ccls').setup({
+    lsp = {
+        codelens = {
+            enable = true,
+            events = {"BufWritePost", "InsertLeave"}
+        }
+    }
+})
+```
+
+_Note:_ Setting up codelens using this plugin requires neovim >= 0.8 as
+`LspAttach` autocmd is only avaialble from version 0.8
+
 ### Coexistence with clangd
 
 If you wish to use clangd alongside ccls and want to avoid conflicting parallel
@@ -357,6 +390,7 @@ descried earlier.
             },
             disable_diagnostics = true,
             disable_signature = true,
+            codelens = { enable = true }
         },
     }
 ```
