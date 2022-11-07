@@ -7,6 +7,8 @@ local default_config = {
     single_file_support = false,
 }
 
+local config_aug = vim.api.nvim_create_augroup("ccls_lsp_setup", { clear = true })
+
 local function disable_capabilities(rules)
     local on_init = function(client)
         local sc = client.server_capabilities
@@ -50,6 +52,38 @@ local function set_root_dir(type)
                 or require("lspconfig.util").find_git_ancestor(fname)
         end
     end
+end
+
+local function enable_codelens(events)
+    local codelens_aug = vim.api.nvim_create_augroup("ccls_codelens", { clear = true })
+
+    vim.api.nvim_create_autocmd("LspAttach", {
+        group = config_aug,
+        callback = function(args)
+            local client = vim.lsp.get_client_by_id(args.data.client_id)
+            if client.name == "ccls" then
+                vim.api.nvim_create_autocmd(events, {
+                    group = codelens_aug,
+                    buffer = args.buf,
+                    callback = vim.lsp.codelens.refresh,
+                    desc = "Refresh ccls codelens",
+                })
+                vim.lsp.codelens.refresh()
+            end
+        end,
+        desc = "Create codelens autocmd on Lsp Attach",
+    })
+
+    vim.api.nvim_create_autocmd("LspDetach", {
+        group = config_aug,
+        callback = function(args)
+            local client = vim.lsp.get_client_by_id(args.data.client_id)
+            if client.name == "ccls" then
+                vim.api.nvim_clear_autocmds { group = codelens_aug, buffer = args.buf }
+            end
+        end,
+        desc = "Clear codelens autocmd on Lsp Detach",
+    })
 end
 
 local function qfRequest(params, method, bufnr, name)
@@ -169,6 +203,10 @@ function protocol.setup_lsp(type, config)
 
     if not config or not config.root_dir then
         set_root_dir(type)
+    end
+
+    if lsp_config.codelens.enable then
+        enable_codelens(lsp_config.codelens.events)
     end
 
     if utils.assert_table(config) then

@@ -20,6 +20,10 @@ local ccls = {
     lsp = {
         nil_handlers = nil,
         disable_capabilities = nil,
+        codelens = {
+            enable = false,
+            events = { "BufEnter", "BufWritePost" },
+        },
     },
 }
 
@@ -45,6 +49,23 @@ function ccls.setup(config)
 
     if utils.assert_table(config.lsp) then
         local nil_handlers = {}
+
+        if utils.assert_table(config.lsp.codelens) then
+            if config.lsp.codelens.enable then
+                if vim.fn.has "nvim-0.8" ~= 1 then
+                    vim.notify(
+                        [[Attempting to configure codelens events. This feature requires nvim>= 0.8]],
+                        vim.log.levels.WARN,
+                        { title = "ccls.nvim" }
+                    )
+                else
+                    ccls.lsp.codelens.enable = true
+                    if utils.assert_table(config.lsp.codelens.events) then
+                        ccls.lsp.codelens.events = config.lsp.codelens.events
+                    end
+                end
+            end
+        end
 
         if utils.tbl_haskey(config.lsp, false, "use_defaults") and config.lsp.use_defaults == true then
             require("ccls.protocol").setup_lsp "lspconfig"
