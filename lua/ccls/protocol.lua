@@ -1,23 +1,54 @@
 local protocol = {}
 
-function protocol.nodeRequest(bufnr, method, params, handler)
-    local util = require "lspconfig.util"
-    bufnr = util.validate_bufnr(bufnr)
-    local client = util.get_active_client_by_name(bufnr, "ccls")
+local default_config = {
+    cmd = { "ccls" },
+    filetypes = { "c", "cpp", "objc", "objcpp" },
+    offset_encoding = "utf-32",
+    single_file_support = false,
+}
 
-    local lspHandler = function(err, result, _, _)
-        if err or not result then
-            vim.notify("No result from ccls", vim.log.levels.WARN, { title = "ccls.nvim" })
-            return
+local function disable_capabilities(rules)
+    local on_init = function(client)
+        local sc = client.server_capabilities
+        for k, v in pairs(rules) do
+            if v == true then
+                if sc[k] then
+                    sc[k] = false
+                else
+                    vim.notify(
+                        "Capabilitiy " .. k .. " is not available or not valid",
+                        vim.log.levels.WARN,
+                        { title = "ccls.nvim" }
+                    )
+                end
+            end
         end
-        handler(result)
     end
+    return on_init
+end
 
-    if client then
-        protocol.offset_encoding = client.offset_encoding or "utf-32"
-        client.request(method, params, lspHandler)
+local function set_nil_handlers(config, handles)
+    ---@diagnostic disable-next-line: unused-vararg
+    local nilfunc = function(...)
+        return nil
+    end
+    if not config.handlers then
+        config.handlers = {}
+    end
+    for _, v in ipairs(handles) do
+        config.handlers[v] = nilfunc
+    end
+end
+
+local function set_root_dir(type)
+    if type ~= "lspconfig" then
+        default_config.root_dir =
+            vim.fs.dirname(vim.fs.find({ "compile_commands.json", "compile_flags.txt", ".git" }, { upward = true })[1])
     else
-        vim.notify("Ccls is not attached to this buffer", vim.log.levels.WARN, { title = "ccls.nvim" })
+        default_config.root_dir = function(fname)
+            return require("lspconfig.util").root_pattern("compile_commands.json", "compile_flags.txt", ".git")(fname)
+                or require("lspconfig.util").find_git_ancestor(fname)
+        end
     end
 end
 
@@ -84,6 +115,27 @@ local function handle_tree(bufnr, method, extra_params, view, data)
     require("ccls.tree").init(p, float_buf)
 end
 
+function protocol.nodeRequest(bufnr, method, params, handler)
+    local util = require "lspconfig.util"
+    bufnr = util.validate_bufnr(bufnr)
+    local client = util.get_active_client_by_name(bufnr, "ccls")
+
+    local lspHandler = function(err, result, _, _)
+        if err or not result then
+            vim.notify("No result from ccls", vim.log.levels.WARN, { title = "ccls.nvim" })
+            return
+        end
+        handler(result)
+    end
+
+    if client then
+        protocol.offset_encoding = client.offset_encoding or "utf-32"
+        client.request(method, params, lspHandler)
+    else
+        vim.notify("Ccls is not attached to this buffer", vim.log.levels.WARN, { title = "ccls.nvim" })
+    end
+end
+
 function protocol.request(method, config, hierarchy, view)
     local bufnr = vim.api.nvim_get_current_buf()
     local params = {
@@ -111,76 +163,27 @@ function protocol.request(method, config, hierarchy, view)
     end
 end
 
-local function disable_capabilities(rules)
-    local on_init = function(client)
-        local sc = client.server_capabilities
-        for k, v in pairs(rules) do
-            if v == true then
-                if sc[k] then
-                    sc[k] = false
-                else
-                    vim.notify(
-                        "Capabilitiy " .. k .. " is not available or not valid",
-                        vim.log.levels.WARN,
-                        { title = "ccls.nvim" }
-                    )
-                end
-            end
-        end
-    end
-    return on_init
-end
+function protocol.setup_lsp(type, config)
+    local utils = require "ccls.tree.utils"
+    local lsp_config = require("ccls").lsp
 
-local function nil_handlers(config, handles)
-    ---@diagnostic disable-next-line: unused-vararg
-    local nilfunc = function(...)
-        return nil
-    end
-    if not config.handlers then
-        config.handlers = {}
-    end
-    for _, v in ipairs(handles) do
-        config.handlers[v] = nilfunc
-    end
-end
-
-local default_config = {
-    cmd = { "ccls" },
-    filetypes = { "c", "cpp", "objc", "objcpp" },
-    offset_encoding = "utf-32",
-    single_file_support = false,
-}
-
-function protocol.setup_lsp(type, config, rules, disables)
     if not config or not config.root_dir then
-        if type ~= "lspconfig" then
-            default_config.root_dir = vim.fs.dirname(
-                vim.fs.find({ "compile_commands.json", "compile_flags.txt", ".git" }, { upward = true })[1]
-            )
-        else
-            default_config.root_dir = function(fname)
-                return require("lspconfig.util").root_pattern("compile_commands.json", "compile_flags.txt", ".git")(
-                    fname
-                ) or require("lspconfig.util").find_git_ancestor(fname)
-            end
-        end
+        set_root_dir(type)
     end
 
-    if not config then
+    if utils.assert_table(config) then
+        default_config = vim.tbl_extend("force", default_config, config)
+    else
         require("lspconfig").ccls.setup(default_config)
         return
     end
 
-    if not vim.tbl_isempty(config) then
-        default_config = vim.tbl_extend("force", default_config, config)
+    if utils.assert_table(lsp_config.disable_capabilities) then
+        default_config.on_init = disable_capabilities(lsp_config.disable_capabilities)
     end
 
-    if rules and not vim.tbl_isempty(rules) then
-        default_config.on_init = disable_capabilities(rules)
-    end
-
-    if disables and not vim.tbl_isempty(rules) then
-        nil_handlers(default_config, disables)
+    if utils.assert_table(lsp_config.nil_handlers) then
+        set_nil_handlers(default_config, lsp_config.nil_handlers)
     end
 
     if type == "lspconfig" then

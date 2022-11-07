@@ -17,55 +17,58 @@ local ccls = {
             border = "rounded",
         },
     },
+    lsp = {
+        nil_handlers = nil,
+        disable_capabilities = nil,
+    },
 }
 
-local function ccls_assert(table)
-    return type(table) == "table" and not vim.tbl_isempty(table)
-end
-
 function ccls.setup(config)
-    if not ccls_assert(config) then
+    local utils = require "ccls.tree.utils"
+
+    if not utils.assert_table(config) then
         return
     end
 
-    local utils = require "ccls.tree.utils"
-
-    if ccls_assert(config.win_config) then
-        if ccls_assert(config.win_config.sidebar) then
+    if utils.assert_table(config.win_config) then
+        if utils.assert_table(config.win_config.sidebar) then
             for k, v in ipairs(config.win_config.sidebar) do
                 ccls.win_config.sidebar[k] = v
             end
         end
-        if ccls_assert(config.win_config.float) then
+        if utils.assert_table(config.win_config.float) then
             for k, v in ipairs(config.win_config.sidebar) do
                 ccls.win_config.float[k] = v
             end
         end
     end
 
-    if ccls_assert(config.lsp) then
-        local handles = {}
+    if utils.assert_table(config.lsp) then
+        local nil_handlers = {}
+
         if utils.tbl_haskey(config.lsp, false, "use_defaults") and config.lsp.use_defaults == true then
             require("ccls.protocol").setup_lsp "lspconfig"
             return
         end
 
         if config.lsp.disable_diagnostics then
-            table.insert(handles, "textDocument/publishDiagnostics")
+            table.insert(nil_handlers, "textDocument/publishDiagnostics")
         end
         if config.lsp.disable_signature then
-            table.insert(handles, "textDocument/signatureHelp")
+            table.insert(nil_handlers, "textDocument/signatureHelp")
+        end
+
+        if not vim.tbl_isempty(nil_handlers) then
+            ccls.lsp.nil_handlers = nil_handlers
+        end
+
+        if utils.assert_table(config.lsp.disable_capabilities) then
+            ccls.lsp.disable_capabilities = config.lsp.disable_capabilities
         end
 
         if utils.tbl_haskey(config.lsp, false, "lspconfig") then
             vim.validate { lspconfig = { config.lsp.lspconfig, "table" } }
-
-            require("ccls.protocol").setup_lsp(
-                "lspconfig",
-                config.lsp.lspconfig,
-                config.lsp.disable_capabilities or {},
-                handles
-            )
+            require("ccls.protocol").setup_lsp("lspconfig", config.lsp.lspconfig)
             return
         end
 
@@ -85,12 +88,7 @@ function ccls.setup(config)
                 offset_encoding = { config.lsp.server.offset_encoding, "string", true },
                 root_dir = { config.lsp.server.root_dir, "string", true },
             }
-            require("ccls.protocol").setup_lsp(
-                "server",
-                config.lsp.server,
-                config.lsp.disable_capabilities or {},
-                handles
-            )
+            require("ccls.protocol").setup_lsp("server", config.lsp.server)
             return
         end
 
@@ -98,7 +96,7 @@ function ccls.setup(config)
             [[Lsp config: Neither `use_defaults` nor server configurations have been specified.
             This will assume that Lsp configuration for ccls has been handled by the user elsewhere
         ]],
-            vim.log.levels.WARN,
+            vim.log.levels.INFO,
             { title = "ccls.nvim" }
         )
     end

@@ -73,4 +73,12 @@ function utils.tbl_haskey(table, any_of, ...)
     end
 end
 
+function utils.assert_table(table)
+    if type(table) ~= "table" then
+        return false
+    else
+        return not vim.tbl_isempty(table)
+    end
+end
+
 return utils

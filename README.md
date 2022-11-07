@@ -2,7 +2,7 @@
 
 A neovim plugin to configure ccls language server and use its extensions.
 [ccls](https://github.com/MaskRay/ccls) is a language server for `c`, `cpp` and variants that offers comparable
-on-speec features as `clangd` along with a many extensions.
+on-spec features as `clangd` along with a many extensions.
 
 This plugin offers a tree-browser structure to parse the AST provided by [ccls
 extensions](https://github.com/MaskRay/ccls/wiki/LSP-Extensions) and to quickly navigate to them.
@@ -11,7 +11,7 @@ These AST features include:
 
 - member functions/variables of an object
 - base and derived hierarchy of a class
-- call hierarchy for a function.
+- call hierarchy for a function
 - sturcts and variables of the same type in the project
 
 There are some additional functionalities, follow the README for them.
@@ -32,13 +32,13 @@ There are some additional functionalities, follow the README for them.
   - [Window configuration](#window-configuration)
   - [Filetypes](#filetypes)
   - [Lsp](#lsp)
-  - [Co-existance with clangd](#co-existance-with-clangd)
+  - [Coexistence with clangd](#coexistence-with-clangd)
 - [NodeTree](#nodetree)
 - [Tests](#tests)
 
 **This plugin is only tested by users and not automated tests.**
 **Its features are still a work in progress. They function as intended but the
-API and function signatures may change. Dont get too attached to these**
+API and function signatures may change. Don't get too attached to these**
 
 Inspired by [vim-ccls](https://github.com/m-pilia/vim-ccls) by Martin Pilia.
 The entire tree-browser part of the code is a lua rewrite of [vim-yggdrasil](https://github.com/m-pilia/vim-yggdrasil) by Martin Pilia.
@@ -153,6 +153,8 @@ The default values are:
 
 ```lua
 defaults = {
+-- Lsp is not setup by default to avoid overriding user's personal configurations.
+-- Look ahead for instructions on using this plugin for ccls setup
     win_config = {
         -- Sidebar configuration
         sidebar = {
@@ -179,7 +181,7 @@ defaults = {
 
 </details>
 
-Any of the configuration options can be opmitted.
+Any of the configuration options can be omitted.
 
 ### Window configuration
 
@@ -188,7 +190,7 @@ Any of the configuration options can be opmitted.
 -`sidebar`: split options
 
 -`float`: same options supplied to `nvim_open_win` or other default floating
-widnows
+windows
 
 ### Filetypes
 
@@ -235,7 +237,7 @@ loaded if lazy-loading). Pass the appropriate configurations like this.
 
 Any option omitted will use `lspconfig` defaults.
 
-Its also possible to entirely use lspconfig defaults like this:
+It is also possible to entirely use lspconfig defaults like this:
 
 ```lua
 require("ccls").setup({lsp = {use_defaults = true}})
@@ -272,11 +274,11 @@ require("ccls").setup {
 
 </details>
 
-If neither `use_defaults` bool, `lspconfig` table or `server` table are
-supplied, the plugin assumes you have setup ccls LSP elsewhere in your config.
-This is the default behaviour
+If neither `use_defaults`, `lspconfig` nor `server` are set,
+then the plugin assumes you have setup ccls LSP elsewhere in your config.
+This is the default behaviour.
 
-### Co-existance with clangd
+### Coexistence with clangd
 
 If you wish to use clangd alongside ccls and want to avoid conflicting parallel
 requests, you can use the following table to disable specific capabilities.
@@ -285,11 +287,11 @@ _Warning:_ Upstream (neovim) maintainers label the process of disabling
 capabilities as _hacky_. Until there is a mechanism in-place upstream that
 uses predicates to select clients for calls, this is the best solution.
 
-This method uses both disabling certain capabilites and passing `nil` handlers
-to others. This makes running two language servers more resource effecient.
+This method uses both disabling certain capabilities and passing `nil` handlers
+to others. This makes running two language servers more resource efficient.
 
-use only the following options. If you do not wish to disable said option,
-either set it to false or simply leave out that option
+Use only the following options. If you do not wish to disable said option,
+either set it to false or simply leave out that option.
 
 <details>
     <summary>Code</summary>
@@ -317,7 +319,7 @@ require("ccls").setup {
 </details>
 
 **Note:** For these disabling mechanisms to be attached to the initiated/running ccls
-insttance, you will have to configure the server through the plugin either using
+instance, you will have to configure the server through the plugin either using
 `lsp = {lspconfig = {my_config_table}}` or `lsp={server={my_0.8.config}}` as
 descried earlier.
 
@@ -383,7 +385,7 @@ For now, it works exactly as intended but is not easy read. The code structure i
 
 ## Tests
 
-This will take some time. Need to figure out how to run an lsp for testing.
+This will take some time. Need to figure out how to run a language server for testing.
 I will look through other plugins to see how they handle it. No promise on time.
 
 </details>
