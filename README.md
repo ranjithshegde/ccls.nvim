@@ -20,10 +20,10 @@ There are some additional functionalities, follow the README for them.
 
 - [ccls extensions](#ccls-extensions)
   - [Quickfix](#quickfix)
-    - [`$ccls/vars`](#cclsvars)
     - [`$ccls/member`](#cclsmember)
     - [`$ccls/call`](#cclscall)
     - [`$ccls/inheritance`](#cclsinheritance)
+    - [`$ccls/vars`](#cclsvars)
   - [Sidebar or float](#sidebar-or-float)
     - [`$ccls/member` hierarchy](#cclsmember-hierarchy)
     - [`$ccls/call` hierarchy](#cclscall-hierarchy)
@@ -32,27 +32,22 @@ There are some additional functionalities, follow the README for them.
   - [Window configuration](#window-configuration)
   - [Filetypes](#filetypes)
   - [Lsp](#lsp)
+    - [Using lspcofing](#using-lspcofing)
+    - [Using direct call](#using-direct-call)
+    - [Codelens](#codelens)
   - [Coexistence with clangd](#coexistence-with-clangd)
 - [NodeTree](#nodetree)
-- [Tests](#tests)
+- [TODO](#todo)
+  - [Preview](#preview)
+  - [Tests](#tests)
 
-**This plugin is only tested by users and not automated tests.**
-**Its features are still a work in progress. They function as intended but the
-API and function signatures may change. Don't get too attached to these**
-
-Inspired by [vim-ccls](https://github.com/m-pilia/vim-ccls) by Martin Pilia.
-The entire tree-browser part of the code is a lua rewrite of [vim-yggdrasil](https://github.com/m-pilia/vim-yggdrasil) by Martin Pilia.
-
-Features include:
+**Features include**:
 
 - Most off-spec `ccls` features
 - Setup lsp either via `lspconfig` or built-in `vim.lsp.start()`
 - Use treesitter to highlight NodeTree window
 - Update tagstack on jump to new node
 - Setup codelens autocmds
-
-Soon to be added:
-Add floating previews for each nodes
 
 ## ccls extensions
 
@@ -61,10 +56,6 @@ Add floating previews for each nodes
 ### Quickfix
 
 The below functions return a quickfix list of items
-
-#### `$ccls/vars`
-
-Called via `:CclsVars kind` or `require("ccls").vars(kind)`
 
 #### `$ccls/member`
 
@@ -95,6 +86,14 @@ Can also be called via
 
 - `:CclsBase`
 - `:CclsDerived`
+
+#### `$ccls/vars`
+
+Called via `:CclsVars kind` or `require("ccls").vars(kind)`.
+This is similar to `textDocument/references` except it checks for the variable
+type.
+Kind values are 1 for all occurence of the variable type, 2 for defintion of
+current variable and 3 for references without definition.
 
 ### Sidebar or float
 
@@ -216,7 +215,8 @@ initiated_.
 
 There are two methods.
 
-**Using lspcofing:**
+#### Using lspcofing
+
 This requires that you have [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig) plugin installed (and already
 loaded if lazy-loading). Pass the appropriate configurations like this.
 
@@ -233,7 +233,7 @@ loaded if lazy-loading). Pass the appropriate configurations like this.
         end,
         init_options = { cache = {
             directory = vim.env.XDG_CACHE_HOME .. "/ccls/",
-            -- or vim.fs.normalize "~/.cache/ccls" -- if on nightly
+            -- or vim.fs.normalize "~/.cache/ccls" -- if on nvim 0.8 or higher
         } },
         --on_attach = require("my.attach").func,
         --capabilities = my_caps_table_or_func
@@ -251,14 +251,15 @@ It is also possible to entirely use lspconfig defaults like this:
 require("ccls").setup({lsp = {use_defaults = true}})
 ```
 
-**Using direct call:**
-If using _nvim nightly_, you can use `vim.lsp.start()` call instead which has the
+#### Using direct call
+
+If using _nvim 0.8_, you can use `vim.lsp.start()` call instead which has the
 benefit of reusing the same client on files within the same workspace.
 
 To use that, pass this in your config, without supplying the keys `use_defaults`
 or `lspconfig`.
 
-**WARNING:** Requires `nvim nightly` or `nvim 0.8`
+**Warning:** Requires `nvim 0.8`
 
 <details>
     <summary>Code</summary>
@@ -417,9 +418,21 @@ For now, it works exactly as intended but is not easy read. The code structure i
     to avoid caching problems. Will be modularized when I rewrite the logic.
   - `ccls/tree/utils.lua` has other function calls not part of `tree` or `node` class but necessary
 
-## Tests
+## TODO
+
+### Preview
+
+Open a floating preview window for node under the cursor from Sidebar
+
+### Tests
 
 This will take some time. Need to figure out how to run a language server for testing.
 I will look through other plugins to see how they handle it. No promise on time.
 
 </details>
+
+## Credits
+
+- [MaskRay](https://github.com/MaskRay) Thank you for creating the LSP!
+- [vim-ccls](https://github.com/m-pilia/vim-ccls) for inspiration and speicifc ideas on translating LSP data into tree-like structure.
+- [vim-yggdrasil](https://github.com/m-pilia/vim-yggdrasil) The entire tree-browser part of the code is a lua rewrite of this plugin.
