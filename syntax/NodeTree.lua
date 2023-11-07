@@ -9,7 +9,7 @@ else
 
     local ok, parse = pcall(require, "nvim-treesitter.parsers")
     if ok then
-        parse.filetype_to_parsername.NodeTree = "cpp"
+        vim.treesitter.language.register("NodeTree", "cpp")
     else
         vim.cmd "syntax include @cpp syntax/cpp.vim"
     end
