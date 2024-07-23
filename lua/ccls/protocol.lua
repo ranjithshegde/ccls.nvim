@@ -1,6 +1,7 @@
 local protocol = {}
 
 local default_config = {
+    name = "ccls",
     cmd = { "ccls" },
     filetypes = { "c", "cpp", "objc", "objcpp" },
     offset_encoding = "utf-32",
