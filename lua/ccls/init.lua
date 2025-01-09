@@ -36,12 +36,12 @@ function ccls.setup(config)
 
     if utils.assert_table(config.win_config) then
         if utils.assert_table(config.win_config.sidebar) then
-            for k, v in ipairs(config.win_config.sidebar) do
+            for k, v in pairs(config.win_config.sidebar) do
                 ccls.win_config.sidebar[k] = v
             end
         end
         if utils.assert_table(config.win_config.float) then
-            for k, v in ipairs(config.win_config.sidebar) do
+            for k, v in pairs(config.win_config.float) do
                 ccls.win_config.float[k] = v
             end
         end
