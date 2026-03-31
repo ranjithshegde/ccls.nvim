@@ -41,13 +41,23 @@ local function jump(location)
     else
         vim.lsp.util.jump_to_location(location, encoding, true)
     end
-    -- show_document uses nvim_win_set_buf internally, which may bypass BufRead/FileType
-    -- autocmds when the buffer was pre-loaded (e.g. via bufload during hover preview).
-    -- Ensure treesitter attaches if it hasn't already.
+    -- show_document/jump_to_location use bufload + nvim_win_set_buf internally,
+    -- which do not fire BufRead/FileType autocmds. Without FileType, treesitter
+    -- never attaches. Detect filetype explicitly when missing (setting it fires
+    -- the FileType autocmd, which triggers treesitter), and start treesitter
+    -- manually if it still hasn't attached.
     vim.schedule(function()
         local bufnr = vim.api.nvim_get_current_buf()
         local ft = vim.bo[bufnr].filetype
-        if ft ~= "" and not vim.treesitter.highlighter.active[bufnr] then
+        if ft == "" then
+            local name = vim.api.nvim_buf_get_name(bufnr)
+            if name ~= "" then
+                local detected = vim.filetype.match({ buf = bufnr, filename = name })
+                if detected then
+                    vim.bo[bufnr].filetype = detected
+                end
+            end
+        elseif not vim.treesitter.highlighter.active[bufnr] then
             pcall(vim.treesitter.start, bufnr)
         end
     end)
