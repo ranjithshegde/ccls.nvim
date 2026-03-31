@@ -34,7 +34,23 @@ local function jump(location)
     if vim.g.ccls_close_on_jump then
         vim.api.nvim_buf_delete(nodeTree_bufno, { force = true })
     end
-    vim.lsp.util.jump_to_location(location, require("ccls.protocol").offset_encoding or "utf-32", true)
+    local encoding = require("ccls.protocol").offset_encoding or "utf-32"
+    -- jump_to_location is deprecated since Neovim 0.12; use show_document instead
+    if vim.lsp.util.show_document then
+        vim.lsp.util.show_document(location, encoding, { reuse_win = true, focus = true })
+    else
+        vim.lsp.util.jump_to_location(location, encoding, true)
+    end
+    -- show_document uses nvim_win_set_buf internally, which may bypass BufRead/FileType
+    -- autocmds when the buffer was pre-loaded (e.g. via bufload during hover preview).
+    -- Ensure treesitter attaches if it hasn't already.
+    vim.schedule(function()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local ft = vim.bo[bufnr].filetype
+        if ft ~= "" and not vim.treesitter.highlighter.active[bufnr] then
+            pcall(vim.treesitter.start, bufnr)
+        end
+    end)
 end
 
 --- Get the collapsibleState for a node. The root is returned expanded on
