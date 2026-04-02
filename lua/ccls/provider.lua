@@ -34,7 +34,13 @@ local function jump(location)
     if vim.g.ccls_close_on_jump then
         vim.api.nvim_buf_delete(nodeTree_bufno, { force = true })
     end
-    vim.lsp.util.jump_to_location(location, require("ccls.protocol").offset_encoding or "utf-32", true)
+    local encoding = require("ccls.protocol").offset_encoding or "utf-32"
+    -- jump_to_location is deprecated since Neovim 0.12; use show_document instead
+    if vim.lsp.util.show_document then
+        vim.lsp.util.show_document(location, encoding, { reuse_win = true, focus = true })
+    else
+        vim.lsp.util.jump_to_location(location, encoding, true)
+    end
 end
 
 --- Get the collapsibleState for a node. The root is returned expanded on
