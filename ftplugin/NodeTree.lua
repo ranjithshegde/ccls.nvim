@@ -3,6 +3,13 @@ if vim.b.did_ftplugin then
 else
     vim.b.did_ftplugin = 1
 
+    if not pcall(vim.treesitter.start, 0, "cpp") then
+        vim.notify(
+            "Failed to start treesitter for cpp, NodeTree syntax highlighting not work. Please update your neovim version",
+            vim.log.levels.WARN
+        )
+    end
+
     vim.opt_local.bufhidden = "wipe"
     vim.opt_local.buftype = "nofile"
     vim.opt_local.foldcolumn = "0"
