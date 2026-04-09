@@ -1,13 +1,5 @@
 local protocol = {}
 
-local default_config = {
-    name = "ccls",
-    cmd = { "ccls" },
-    filetypes = { "c", "cpp", "objc", "objcpp" },
-    offset_encoding = "utf-32",
-    single_file_support = false,
-}
-
 local config_aug = vim.api.nvim_create_augroup("ccls_lsp_setup", { clear = true })
 
 local function disable_capabilities(rules)
@@ -43,18 +35,6 @@ local function set_nil_handlers(config, handles)
     end
 end
 
-local function set_root_dir(type)
-    if type ~= "lspconfig" then
-        default_config.root_dir =
-            vim.fs.dirname(vim.fs.find({ "compile_commands.json", "compile_flags.txt", ".git" }, { upward = true })[1])
-    else
-        default_config.root_dir = function(fname)
-            return require("lspconfig.util").root_pattern("compile_commands.json", "compile_flags.txt", ".git")(fname)
-                or require("lspconfig.util").find_git_ancestor(fname)
-        end
-    end
-end
-
 local function enable_codelens(events)
     local codelens_aug = vim.api.nvim_create_augroup("ccls_codelens", { clear = true })
 
@@ -66,10 +46,12 @@ local function enable_codelens(events)
                 vim.api.nvim_create_autocmd(events, {
                     group = codelens_aug,
                     buffer = args.buf,
-                    callback = vim.lsp.codelens.refresh,
+                    callback = function()
+                        vim.lsp.codelens.enable(true)
+                    end,
                     desc = "Refresh ccls codelens",
                 })
-                vim.lsp.codelens.refresh()
+                vim.lsp.codelens.enable(true)
             end
         end,
         desc = "Create codelens autocmd on Lsp Attach",
@@ -88,9 +70,8 @@ local function enable_codelens(events)
 end
 
 local function qfRequest(params, method, bufnr, name)
-    local util = require "lspconfig.util"
-    bufnr = util.validate_bufnr(bufnr)
-    local client = util.get_active_client_by_name(bufnr, "ccls")
+    bufnr = bufnr == 0 and vim.api.nvim_get_current_buf() or bufnr
+    local client = vim.lsp.get_clients({ name = "ccls", bufnr = bufnr })[1]
 
     if client then
         local function handler(_, result, ctx, _)
@@ -151,9 +132,8 @@ local function handle_tree(bufnr, method, extra_params, view, data)
 end
 
 function protocol.nodeRequest(bufnr, method, params, handler)
-    local util = require "lspconfig.util"
-    bufnr = util.validate_bufnr(bufnr)
-    local client = util.get_active_client_by_name(bufnr, "ccls")
+    bufnr = bufnr == 0 and vim.api.nvim_get_current_buf() or bufnr
+    local client = vim.lsp.get_clients({ name = "ccls", bufnr = bufnr })[1]
 
     local lspHandler = function(err, result, _, _)
         if err or not result then
@@ -198,47 +178,35 @@ function protocol.request(method, config, hierarchy, view)
     end
 end
 
-function protocol.setup_lsp(type, config)
+function protocol.setup_lsp(config)
     local utils = require "ccls.tree.utils"
     local lsp_config = require("ccls").lsp
-
-    if not config or not config.root_dir then
-        set_root_dir(type)
-    end
 
     if lsp_config.codelens.enable then
         enable_codelens(lsp_config.codelens.events)
     end
 
-    if utils.assert_table(config) then
-        default_config = vim.tbl_extend("force", default_config, config)
-    else
-        require("lspconfig").ccls.setup(default_config)
-        return
+    if not utils.assert_table(config) then
+        config = {}
     end
 
     if utils.assert_table(lsp_config.disable_capabilities) then
-        default_config.on_init = disable_capabilities(lsp_config.disable_capabilities)
+        config.on_init = disable_capabilities(lsp_config.disable_capabilities)
     end
 
     if utils.assert_table(lsp_config.nil_handlers) then
-        set_nil_handlers(default_config, lsp_config.nil_handlers)
+        set_nil_handlers(config, lsp_config.nil_handlers)
     end
 
-    if type == "lspconfig" then
-        require("lspconfig").ccls.setup(default_config)
-        return
-    end
+    vim.api.nvim_create_autocmd("FileType", {
+        pattern = config.filetypes or { "c", "cpp", "objc", "objcpp" },
+        group = vim.api.nvim_create_augroup("ccls_config", { clear = true }),
+        callback = function()
+            vim.lsp.config("ccls", config)
+        end,
+    })
 
-    if type == "server" then
-        vim.api.nvim_create_autocmd("FileType", {
-            pattern = default_config.filetypes or { "c", "cpp", "objc", "objcpp" },
-            group = vim.api.nvim_create_augroup("ccls_config", { clear = true }),
-            callback = function()
-                vim.lsp.start(default_config)
-            end,
-        })
-    end
+    vim.lsp.enable("ccls", true)
 end
 
 return protocol
