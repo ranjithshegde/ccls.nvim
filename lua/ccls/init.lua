@@ -134,4 +134,8 @@ function ccls.inheritanceHierarchy(derived, view)
     require("ccls.protocol").request("$ccls/inheritance", { derived = derived or false }, true, view)
 end
 
+function ccls.navigate(direction)
+    require("ccls.protocol").navigate(direction)
+end
+
 return ccls

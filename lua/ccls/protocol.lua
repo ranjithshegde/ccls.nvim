@@ -176,6 +176,37 @@ function protocol.request(method, config, hierarchy, view)
     end
 end
 
+function protocol.navigate(direction)
+    local bufnr = vim.api.nvim_get_current_buf()
+    local cursor = vim.fn.getcurpos()
+    local params = {
+        textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+        position = {
+            line = cursor[2] - 1,
+            character = cursor[3] - 1,
+        },
+        direction = direction,
+    }
+
+    local client = vim.lsp.get_clients({ name = "ccls", bufnr = bufnr })[1]
+    if not client then
+        vim.notify("Ccls is not attached to this buffer", vim.log.levels.WARN, { title = "ccls.nvim" })
+        return
+    end
+
+    client:request("$ccls/navigate", params, function(err, result)
+        if err or not result then
+            vim.notify("No navigate result", vim.log.levels.WARN, { title = "ccls.nvim" })
+            return
+        end
+        local location = vim.islist(result) and result[1] or result
+        if not location then
+            return
+        end
+        vim.lsp.util.show_document(location, client.offset_encoding, { reuse_win = true, focus = true })
+    end, bufnr)
+end
+
 function protocol.setup_lsp(config)
     local utils = require "ccls.tree.utils"
     local lsp_config = require("ccls").lsp

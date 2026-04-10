@@ -59,3 +59,19 @@ end, { nargs = "*", desc = "ccls member functions" })
 cmd("CclsMemberTypeHierarchy", function(opts)
     require("ccls").memberHierarchy(2, { type = opts.args })
 end, { nargs = "*", desc = "ccls member types" })
+
+cmd("CclsNavigateUp", function()
+    require("ccls").navigate "U"
+end, { desc = "ccls navigate to parent" })
+
+cmd("CclsNavigateDown", function()
+    require("ccls").navigate "D"
+end, { desc = "ccls navigate to first child" })
+
+cmd("CclsNavigateLeft", function()
+    require("ccls").navigate "L"
+end, { desc = "ccls navigate to previous sibling" })
+
+cmd("CclsNavigateRight", function()
+    require("ccls").navigate "R"
+end, { desc = "ccls navigate to next sibling" })
