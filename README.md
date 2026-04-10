@@ -1,4 +1,4 @@
-# ccls.nvim
+cc# ccls.nvim
 
 A neovim plugin to configure ccls language server and use its extensions.
 [ccls](https://github.com/MaskRay/ccls) is a language server for `c`, `cpp` and variants that offers comparable
@@ -44,7 +44,7 @@ There are some additional functionalities, follow the README for them.
 
 **Features include**:
 
-- Most off-spec `ccls` features
+- off-spec `ccls` features
 - Native LSP setup via `vim.lsp.config` / `vim.lsp.enable` (nvim 0.12+)
 - Use treesitter to highlight NodeTree window
 - Update tagstack on jump to new node
@@ -101,11 +101,11 @@ When omitted, a sidebar is used.
 
 Inside the window, use the following maps:
 
-- `o` — open node under cursor
-- `c` — close node under cursor
-- `O` — toggle node under cursor
-- `<CR>` — jump to node under cursor
-- `q` — quit window
+- `o` : open node under cursor
+- `c` : close node under cursor
+- `O` : toggle node under cursor
+- `<CRw` : jump to node under cursor
+- `q` : quit window
 
 #### `$ccls/member` hierarchy
 
@@ -310,9 +310,9 @@ If you use clangd alongside ccls and want to avoid conflicting parallel requests
 
 The `NodeTree` filetype renders the tree structure returned by ccls hierarchy queries. It is a Lua rewrite of Martin Pilia's `vim-yggdrasil`. The code structure is:
 
-- `ccls/provider.lua` — adapts LSP results into a NodeTree-compatible format
-- `ccls/tree/tree.lua` — Tree class
-- `ccls/tree/node.lua` — node constructor and rendering logic
+- `ccls/provider.lua` adapts LSP results into a NodeTree-compatible format
+- `ccls/tree/tree.lua` Tree class
+- `ccls/tree/node.lua` node constructor and rendering logic
 
 ## TODO
 
@@ -326,6 +326,6 @@ Need to figure out how to run a language server in a test environment. Will look
 
 ## Credits
 
-- [MaskRay](https://github.com/MaskRay) — thank you for creating the LSP!
-- [vim-ccls](https://github.com/m-pilia/vim-ccls) — inspiration and ideas for translating LSP data into tree structure.
-- [vim-yggdrasil](https://github.com/m-pilia/vim-yggdrasil) — the entire tree-browser part of the code is a Lua rewrite of this plugin.
+- [MaskRay](https://github.com/MaskRay): thank you for creating the LSP!
+- [vim-ccls](https://github.com/m-pilia/vim-ccls): inspiration and ideas for translating LSP data into tree structure.
+- [vim-yggdrasil](https://github.com/m-pilia/vim-yggdrasil): the entire tree-browser part of the code is a Lua rewrite of this plugin.
