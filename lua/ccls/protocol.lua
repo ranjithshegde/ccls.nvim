@@ -87,7 +87,7 @@ local function qfRequest(params, method, bufnr, name)
             end
         end
 
-        client.request(method, params, handler, bufnr)
+        client:request(method, params, handler, bufnr)
     else
         vim.notify("Ccls is not attached to this buffer", vim.log.levels.WARN, { title = "ccls.nvim" })
     end
@@ -97,6 +97,7 @@ end
 local function handle_tree(bufnr, method, extra_params, view, data)
     if type(data) ~= "table" then
         vim.notify("No hierarchy for the object under the cursor", nil, { title = "ccls.nvim" })
+        return
     end
 
     local win_config = require("ccls").win_config
@@ -104,28 +105,25 @@ local function handle_tree(bufnr, method, extra_params, view, data)
     local p = require("ccls.provider"):create(data, method, bufnr, extra_params)
     local float_buf
 
-    if view and view.type and view.type == "float" then
-        local float_id = vim.api.nvim_open_win(vim.api.nvim_create_buf(false, true), true, win_config.float)
-        float_buf = vim.api.nvim_win_get_buf(float_id)
-        vim.fn.win_gotoid(float_id)
+    local is_float = view and view.type and view.type == "float"
+    local cfg = is_float and win_config.float
+        or {
+            split = win_config.sidebar.position,
+            width = win_config.sidebar.size,
+        }
 
+    local win_id = vim.api.nvim_open_win(vim.api.nvim_create_buf(false, true), true, cfg)
+    float_buf = vim.api.nvim_win_get_buf(win_id)
+
+    if is_float then
         vim.api.nvim_create_autocmd("WinLeave", {
             buffer = float_buf,
             group = au,
             callback = function()
-                vim.api.nvim_win_close(float_id, true)
+                vim.api.nvim_win_close(win_id, true)
             end,
             once = true,
         })
-    else
-        vim.api.nvim_exec(
-            win_config.sidebar.position .. " " .. win_config.sidebar.size .. win_config.sidebar.split,
-            false
-        )
-        local new_buf = vim.api.nvim_get_current_buf()
-        if new_buf ~= bufnr then
-            float_buf = new_buf
-        end
     end
 
     require("ccls.tree").init(p, float_buf)

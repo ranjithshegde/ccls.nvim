@@ -2,8 +2,7 @@ local ccls = {
     win_config = {
         sidebar = {
             size = 50,
-            position = "topleft",
-            split = "vnew",
+            position = "left",
             width = 50,
             height = 20,
         },
