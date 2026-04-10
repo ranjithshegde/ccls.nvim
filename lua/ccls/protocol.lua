@@ -186,10 +186,6 @@ function protocol.setup_lsp(config)
         enable_codelens(lsp_config.codelens.events)
     end
 
-    if not utils.assert_table(config) then
-        config = {}
-    end
-
     if utils.assert_table(lsp_config.disable_capabilities) then
         config.on_init = disable_capabilities(lsp_config.disable_capabilities)
     end
@@ -198,14 +194,7 @@ function protocol.setup_lsp(config)
         set_nil_handlers(config, lsp_config.nil_handlers)
     end
 
-    vim.api.nvim_create_autocmd("FileType", {
-        pattern = config.filetypes or { "c", "cpp", "objc", "objcpp" },
-        group = vim.api.nvim_create_augroup("ccls_config", { clear = true }),
-        callback = function()
-            vim.lsp.config("ccls", config)
-        end,
-    })
-
+    vim.lsp.config("ccls", config)
     vim.lsp.enable("ccls", true)
 end
 

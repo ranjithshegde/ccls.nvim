@@ -99,6 +99,8 @@ function ccls.setup(config)
                 offset_encoding = { config.lsp.server.offset_encoding, "string", true },
                 root_markers = { config.lsp.server.root_markers, "table", true },
             }
+        else
+            config.lsp.server = {}
         end
 
         require("ccls.protocol").setup_lsp(config.lsp.server)
