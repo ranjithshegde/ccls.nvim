@@ -2,8 +2,7 @@ local ccls = {
     win_config = {
         sidebar = {
             size = 50,
-            position = "topleft",
-            split = "vnew",
+            position = "left",
             width = 50,
             height = 20,
         },
@@ -67,11 +66,6 @@ function ccls.setup(config)
             end
         end
 
-        if utils.tbl_haskey(config.lsp, false, "use_defaults") and config.lsp.use_defaults == true then
-            require("ccls.protocol").setup_lsp "lspconfig"
-            return
-        end
-
         if config.lsp.disable_diagnostics then
             table.insert(nil_handlers, "textDocument/publishDiagnostics")
         end
@@ -87,39 +81,28 @@ function ccls.setup(config)
             ccls.lsp.disable_capabilities = config.lsp.disable_capabilities
         end
 
-        if utils.tbl_haskey(config.lsp, false, "lspconfig") then
-            vim.validate { lspconfig = { config.lsp.lspconfig, "table" } }
-            require("ccls.protocol").setup_lsp("lspconfig", config.lsp.lspconfig)
+        if vim.fn.has "nvim-0.12" ~= 1 then
+            vim.notify(
+                [[Attempting to configure Lsp server. This feature requires nvim>= 0.12]],
+                vim.log.levels.ERROR,
+                { title = "ccls.nvim" }
+            )
             return
         end
 
         if utils.tbl_haskey(config.lsp, false, "server") then
-            if vim.fn.has "nvim-0.8" ~= 1 then
-                vim.notify(
-                    [[Attempting to set key `config.lsp.server`. This feature requires nvim>= 0.8. Either upadte to nvim-nightly or use config.lsp.lspconfig]],
-                    vim.log.levels.ERROR,
-                    { title = "ccls.nvim" }
-                )
-                return
-            end
             vim.validate {
                 name = { config.lsp.server.name, "string", true },
                 cmd = { config.lsp.server.cmd, "table", true },
                 args = { config.lsp.server.args, "table", true },
                 offset_encoding = { config.lsp.server.offset_encoding, "string", true },
-                root_dir = { config.lsp.server.root_dir, "string", true },
+                root_markers = { config.lsp.server.root_markers, "table", true },
             }
-            require("ccls.protocol").setup_lsp("server", config.lsp.server)
-            return
+        else
+            config.lsp.server = {}
         end
 
-        vim.notify(
-            [[Lsp config: Neither `use_defaults` nor server configurations have been specified.
-            This will assume that Lsp configuration for ccls has been handled by the user elsewhere
-        ]],
-            vim.log.levels.INFO,
-            { title = "ccls.nvim" }
-        )
+        require("ccls.protocol").setup_lsp(config.lsp.server)
     end
 end
 
@@ -149,6 +132,10 @@ end
 
 function ccls.inheritanceHierarchy(derived, view)
     require("ccls.protocol").request("$ccls/inheritance", { derived = derived or false }, true, view)
+end
+
+function ccls.navigate(direction)
+    require("ccls.protocol").navigate(direction)
 end
 
 return ccls

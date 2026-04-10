@@ -54,7 +54,7 @@ end
 --- tree view. Clear the index, setting it to a list containing a guard
 --- value for index 0 (line numbers are one-based).
 function Tree:render()
-    if vim.api.nvim_buf_get_option(0, "filetype") ~= "NodeTree" then
+    if vim.bo.filetype ~= "NodeTree" then
         return
     end
 

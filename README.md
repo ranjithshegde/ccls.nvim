@@ -2,7 +2,7 @@
 
 A neovim plugin to configure ccls language server and use its extensions.
 [ccls](https://github.com/MaskRay/ccls) is a language server for `c`, `cpp` and variants that offers comparable
-on-spec features as `clangd` along with a many extensions.
+on-spec features as `clangd` along with many extensions.
 
 This plugin offers a tree-browser structure to parse the AST provided by [ccls
 extensions](https://github.com/MaskRay/ccls/wiki/LSP-Extensions) and to quickly navigate to them.
@@ -12,11 +12,14 @@ These AST features include:
 - member functions/variables of an object
 - base and derived hierarchy of a class
 - call hierarchy for a function
-- sturcts and variables of the same type in the project
+- structs and variables of the same type in the project
 
 There are some additional functionalities, follow the README for them.
 
 [ccls_demo.webm](https://user-images.githubusercontent.com/10258296/185764424-45945b84-f397-4fdf-87d4-abbdaed8a0fc.webm)
+
+> **Requires Neovim >= 0.12**
+> If you are on an older version, use the [`pre_refactor_to_0.12`](https://github.com/ranjithshegde/ccls.nvim/releases/tag/pre_refactor_to_0.12) tag.
 
 - [ccls extensions](#ccls-extensions)
   - [Quickfix](#quickfix)
@@ -28,34 +31,32 @@ There are some additional functionalities, follow the README for them.
     - [`$ccls/member` hierarchy](#cclsmember-hierarchy)
     - [`$ccls/call` hierarchy](#cclscall-hierarchy)
     - [`$ccls/inheritance` hierarchy](#cclsinheritance-hierarchy)
+  - [Navigate](#navigate)
 - [Configuration](#configuration)
   - [Window configuration](#window-configuration)
-  - [Filetypes](#filetypes)
   - [Lsp](#lsp)
-    - [Using lspcofing](#using-lspcofing)
-    - [Using direct call](#using-direct-call)
+    - [Default LSP config](#default-lsp-config)
+    - [Overriding LSP config](#overriding-lsp-config)
     - [Codelens](#codelens)
   - [Coexistence with clangd](#coexistence-with-clangd)
 - [NodeTree](#nodetree)
 - [TODO](#todo)
-  - [Preview](#preview)
-  - [Tests](#tests)
 
 **Features include**:
 
 - Most off-spec `ccls` features
-- Setup lsp either via `lspconfig` or built-in `vim.lsp.start()`
+- Native LSP setup via `vim.lsp.config` / `vim.lsp.enable` (nvim 0.12+)
 - Use treesitter to highlight NodeTree window
 - Update tagstack on jump to new node
 - Setup codelens autocmds
 
 ## ccls extensions
 
-`ccls` LSP has many off-spec commands/calls. This plugin supports the following
+`ccls` LSP has many off-spec commands/calls. This plugin supports the following.
 
 ### Quickfix
 
-The below functions return a quickfix list of items
+The below functions return a quickfix list of items.
 
 #### `$ccls/member`
 
@@ -64,25 +65,22 @@ kind 4 = variables, 3 = functions, 2 = type
 
 Individual member calls can also be made via
 
-- `:CclsMember` for Variables
+- `:CclsMember` for variables
 - `:CclsMemberFunction` for functions
 - `:CclsMemberType` for types
 
 #### `$ccls/call`
 
 Called via `require("ccls").call(callee)`.
-true = outgoing calls, false = incoming calls
-Can also be called via
+`true` = outgoing calls, `false` = incoming calls. Can also be called via:
 
 - `:CclsIncomingCalls`
 - `:CclsOutgoingCalls`
 
 #### `$ccls/inheritance`
 
-Called via `require("ccls").inheritance(derived)`
-derived `true` for derived classes, `false` for base classes
-
-Can also be called via
+Called via `require("ccls").inheritance(derived)`.
+`true` for derived classes, `false` for base classes. Can also be called via:
 
 - `:CclsBase`
 - `:CclsDerived`
@@ -90,79 +88,81 @@ Can also be called via
 #### `$ccls/vars`
 
 Called via `:CclsVars kind` or `require("ccls").vars(kind)`.
-This is similar to `textDocument/references` except it checks for the variable
-type.
-Kind values are 1 for all occurence of the variable type, 2 for defintion of
-current variable and 3 for references without definition.
+Similar to `textDocument/references` but filters by variable type.
+Kind values: 1 = all occurrences of the variable type, 2 = definition of current variable, 3 = references without definition.
 
 ### Sidebar or float
 
-The following functions are hierarchical and return either a sidebar or a
-floating window
+The following functions are hierarchical and return either a sidebar or a floating window.
 
-Each lua callback has a view option. View is a table with example `{type = "float"}` to use floating window.
-For vim commands it can be passed via `:CclsMemberHierarchy float`
-When omitted it uses a sidebar.
+Each Lua callback has a `view` option. Pass `{type = "float"}` for a floating window.
+For vim commands it can be passed via `:CclsMemberHierarchy float`.
+When omitted, a sidebar is used.
 
-Inside the window, use maps:
+Inside the window, use the following maps:
 
-- `o` to open a node under cursor.
-- `c` to close the node under cursor
-- `O` to toggle node under cursor
-- `CR` to jump to node under cursor
-- `q` To quit window
+- `o` — open node under cursor
+- `c` — close node under cursor
+- `O` — toggle node under cursor
+- `<CR>` — jump to node under cursor
+- `q` — quit window
 
 #### `$ccls/member` hierarchy
 
 Called via `require("ccls").memberHierarchy(kind, view)`.
-kind 4 = variables, 3 = functions, 2 = type
+kind 4 = variables, 3 = functions, 2 = type. Can also be called via:
 
-individual member calls can also be made via
-
-- `:CclsMemberHierarchy` for Variables
-- `:CclsMemberFunction` for functions
-- `:CclsMemberTyoe` for types
+- `:CclsMemberHierarchy` for variables
+- `:CclsMemberFunctionHierarchy` for functions
+- `:CclsMemberTypeHierarchy` for types
 
 #### `$ccls/call` hierarchy
 
-Called via `require("ccls").callHierarchy(callee)`.
-true = outgoing calls, false = incoming calls
-Can also be called via
+Called via `require("ccls").callHierarchy(callee, view)`.
+`true` = outgoing calls, `false` = incoming calls. Can also be called via:
 
 - `:CclsIncomingCallsHierarchy`
 - `:CclsOutgoingCallsHierarchy`
 
 #### `$ccls/inheritance` hierarchy
 
-Called via `require("ccls").inheritanceHierarchy(derived)`
-derived `true` for derived classes, `false` for base classes
-
-Can also be called via
+Called via `require("ccls").inheritanceHierarchy(derived, view)`.
+`true` for derived classes, `false` for base classes. Can also be called via:
 
 - `:CclsBaseHierarchy`
 - `:CclsDerivedHierarchy`
 
+### Navigate
+
+`$ccls/navigate` lets you jump between semantically related symbols in the AST — parent, child, or siblings — without opening a tree view.
+
+Called via `require("ccls").navigate(direction)` where direction is one of `"U"` (parent), `"D"` (first child), `"L"` (previous sibling), `"R"` (next sibling).
+
+Can also be called via:
+
+- `:CclsNavigateUp`
+- `:CclsNavigateDown`
+- `:CclsNavigateLeft`
+- `:CclsNavigateRight`
+
 ## Configuration
 
-Call `require("ccls").setup(config)` somewhere in your config
+Call `require("ccls").setup(config)` somewhere in your config.
 
 The default values are:
 
 <details>
-    <summary>Code</summary>
+<summary>Defaults</summary>
 
 ```lua
-defaults = {
+{
     win_config = {
-        -- Sidebar configuration
         sidebar = {
             size = 50,
-            position = "topleft",
-            split = "vnew",
+            position = "left",
             width = 50,
             height = 20,
         },
-        -- floating window configuration. check :help nvim_open_win for options
         float = {
             style = "minimal",
             relative = "cursor",
@@ -173,16 +173,12 @@ defaults = {
             border = "rounded",
         },
     },
-    filetypes = {"c", "cpp", "objc", "objcpp"},
-
-    -- Lsp is not setup by default to avoid overriding user's personal configurations.
-    -- Look ahead for instructions on using this plugin for ccls setup
     lsp = {
         codelens = {
-            enabled = false,
-            events = {"BufEnter", "BufWritePost"}
-        }
-    }
+            enable = false,
+            events = { "BufEnter", "BufWritePost" },
+        },
+    },
 }
 ```
 
@@ -192,247 +188,144 @@ Any of the configuration options can be omitted.
 
 ### Window configuration
 
-`win_config` table accepts two keys:
+`win_config` accepts two keys:
 
--`sidebar`: split options
-
--`float`: same options supplied to `nvim_open_win` or other default floating
-windows
-
-### Filetypes
-
-By default, this plugin works on all filetypes accepted by `ccls` language
-server. You can customize this by adding `filetypes` table to the config
-
-```lua
-require("ccls").setup({filetypes = {"c", "cpp", "opencl"}})
-```
+- `sidebar`: controls the split window. `position` maps to the `split` field of `nvim_open_win` (e.g. `"left"`, `"right"`). `size` sets the width.
+- `float`: options passed directly to `nvim_open_win`.
 
 ### Lsp
 
-You can optionally setup LSP through the plugin. _By default no setup calls are
-initiated_.
+> **Note:** LSP setup requires Neovim >= 0.12. If you are not on 0.12, use the `pre_refactor_to_0.12` tag and refer to its README.
 
-There are two methods.
+This plugin uses Neovim's native `vim.lsp.config` / `vim.lsp.enable` API. **No lspconfig dependency is required.**
 
-#### Using lspcofing
+#### Default LSP config
 
-This requires that you have [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig) plugin installed (and already
-loaded if lazy-loading). Pass the appropriate configurations like this.
+A default LSP config is provided in `lsp/ccls.lua` and is automatically picked up by Neovim's LSP config discovery (`:h lsp-config`). It sets:
 
-<details>
-    <summary>Code</summary>
+- `cmd = { "ccls" }`
+- `filetypes = { "c", "cpp", "objc", "objcpp", "cuda" }`
+- `offset_encoding = "utf-32"`
+- `workspace_required = true`
+- `root_markers = { "compile_commands.json", "compile_flags.txt", ".ccls", ".git" }`
+
+If this is sufficient for your setup, you do not need to pass a `server` table at all. Just call:
 
 ```lua
-    local util = require "lspconfig.util"
-    local server_config = {
-        filetypes = { "c", "cpp", "objc", "objcpp", "opencl" },
-        root_dir = function(fname)
-            return util.root_pattern("compile_commands.json", "compile_flags.txt", ".git")(fname)
-                or util.find_git_ancestor(fname)
-        end,
-        init_options = { cache = {
-            directory = vim.env.XDG_CACHE_HOME .. "/ccls/",
-            -- or vim.fs.normalize "~/.cache/ccls" -- if on nvim 0.8 or higher
-        } },
-        --on_attach = require("my.attach").func,
-        --capabilities = my_caps_table_or_func
-    }
-    require("ccls").setup { lsp = { lspconfig = server_config } }
+require("ccls").setup({ lsp = {--[[other config, not server table]] })
 ```
 
-</details>
+#### Overriding LSP config
 
-Any option omitted will use `lspconfig` defaults.
-
-It is also possible to entirely use lspconfig defaults like this:
+To override any of the defaults, pass a `server` table inside `lsp`:
 
 ```lua
-require("ccls").setup({lsp = {use_defaults = true}})
-```
-
-#### Using direct call
-
-If using _nvim 0.8_, you can use `vim.lsp.start()` call instead which has the
-benefit of reusing the same client on files within the same workspace.
-
-To use that, pass this in your config, without supplying the keys `use_defaults`
-or `lspconfig`.
-
-**Warning:** Requires `nvim 0.8`
-
-<details>
-    <summary>Code</summary>
-
-```lua
-require("ccls").setup {
+require("ccls").setup({
     lsp = {
-        -- check :help vim.lsp.start for config options
         server = {
-            name = "ccls", --String name
-            cmd = {"/usr/bin/ccls"}, -- point to your binary, has to be a table
-            args = {--[[Any args table]] },
-            offset_encoding = "utf-32", -- default value set by plugin
-            root_dir = vim.fs.dirname(vim.fs.find({ "compile_commands.json", ".git" }, { upward = true })[1]), -- or some other function that returns a string
-            --on_attach = your_func,
-            --capabilites = your_table/func
+            cmd = { "/usr/local/bin/ccls" },
+            root_markers = { "compile_commands.json", ".git" },
+            -- any other vim.lsp.config-compatible keys
         },
     },
-}
-```
-
-</details>
-
-If neither `use_defaults`, `lspconfig` nor `server` are set,
-then the plugin assumes you have setup ccls LSP elsewhere in your config.
-This is the default behaviour.
-
-#### Codelens
-
-ccls has minimal codelens capabilites. If you are not familiar with codenels, see [Lsp spec
-documentation](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_codeLens).
-According to ccls server capabilities tree, ccls supports `resolveProvider`
-option of codelens.
-
-To enable codelens, set `lsp = { codelens = {enable = true}}` in the config.
-It is necessary to setup autocmds to refresh codelens. The default events are
-`BufEnter` and `BufWritePost`. You can customize it this way:
-
-```lua
-require('ccls').setup({
-    lsp = {
-        codelens = {
-            enable = true,
-            events = {"BufWritePost", "InsertLeave"}
-        }
-    }
 })
 ```
 
-_Note:_ Setting up codelens using this plugin requires neovim >= 0.8 as
-`LspAttach` autocmd is only avaialble from version 0.8
+The `server` table is merged on top of the base config via `vim.lsp.config`.
+
+> **Removed options:** `use_defaults`, `lspconfig`, and `root_dir` (string) are no longer supported. Use `root_markers` (table) instead, which is handled natively by Neovim's LSP client. The `lspconfig` dependency has been fully dropped.
+
+#### Codelens
+
+ccls has minimal codelens capabilities. See the [LSP spec](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_codeLens) for background.
+
+To enable codelens:
+
+```lua
+require("ccls").setup({
+    lsp = {
+        codelens = {
+            enable = true,
+            events = { "BufWritePost", "InsertLeave" }, -- optional, these are not the defaults
+        },
+    },
+})
+```
+
+Default refresh events are `BufEnter` and `BufWritePost`.
 
 ### Coexistence with clangd
 
-If you wish to use clangd alongside ccls and want to avoid conflicting parallel
-requests, you can use the following table to disable specific capabilities.
+If you use clangd alongside ccls and want to avoid conflicting parallel requests, you can disable specific capabilities and handlers.
 
-_Warning:_ Upstream (neovim) maintainers label the process of disabling
-capabilities as _hacky_. Until there is a mechanism in-place upstream that
-uses predicates to select clients for calls, this is the best solution.
-
-This method uses both disabling certain capabilities and passing `nil` handlers
-to others. This makes running two language servers more resource efficient.
-
-Use only the following options. If you do not wish to disable said option,
-either set it to false or simply leave out that option.
+> **Note:** Upstream Neovim maintainers consider disabling capabilities a workaround. This remains the best available approach until a predicate-based client selection mechanism lands upstream.
 
 <details>
-    <summary>Code</summary>
+<summary>Full example (from my local config)</summary>
 
 ```lua
-require("ccls").setup {
-    lsp = {
-        disable_capabilities = {
-            completionProvider = true,
-            documentFormattingProvider = true,
-            documentRangeFormattingProvider = true,
-            documentHighlightProvider = true,
-            documentSymbolProvider = true,
-            workspaceSymbolProvider = true,
-            renameProvider = true,
-            hoverProvider = true,
-            codeActionProvider = true,
-        },
-        disable_diagnostics = true,
-        disable_signature = true,
-    },
-}
-```
+    local cpu_count = #vim.uv.cpu_info()
+    local ccls_threads = math.max(1, cpu_count - 1)
 
-</details>
-
-**Note:** For these disabling mechanisms to be attached to the initiated/running ccls
-instance, you will have to configure the server through the plugin either using
-`lsp = {lspconfig = {my_config_table}}` or `lsp={server={my_0.8.config}}` as
-descried earlier.
-
-<details>
-    <summary>Here is a complete setup example from my config (using nvim 0.8 features) </summary>
-
-```lua
-    local filetypes = { "c", "cpp", "objc", "objcpp", "opencl" }
     local server_config = {
-        filetypes = filetypes,
-        init_options = { cache = {
-            directory = vim.fs.normalize "~/.cache/ccls/",
-        } },
-        name = "ccls",
-        cmd = { "ccls" },
-        offset_encoding = "utf-32",
-        root_dir = vim.fs.dirname(
-            vim.fs.find({ "compile_commands.json", "compile_flags.txt", ".git" }, { upward = true })[1]
-        ),
+        cmd = { 'ccls', '--log-file=/tmp/ccls.log', '--v=0' },
+        filetypes = { 'c', 'cpp', 'objc', 'objcpp', 'opencl' },
+        init_options = {
+            threads = ccls_threads,
+            index = {
+                trackDependency = 1,
+                blacklist = { '^build/', '^.cache/', '^bin/', '^packaging', '^res' },
+            },
+            cache = {
+                directory = '.ccls-cache',
+            },
+        },
     }
-    require("ccls").setup {
-        filetypes = filetypes,
+
+    require('ccls').setup {
         lsp = {
             server = server_config,
             disable_capabilities = {
                 completionProvider = true,
                 documentFormattingProvider = true,
+                definitionProvider = true,
                 documentRangeFormattingProvider = true,
                 documentHighlightProvider = true,
                 documentSymbolProvider = true,
-                workspaceSymbolProvider = true,
-                renameProvider = true,
                 hoverProvider = true,
-                codeActionProvider = true,
+                referencesProvider = true,
+                renameProvider = true,
+                typeDefinitionProvider = true,
+                workspaceSymbolProvider = true,
             },
             disable_diagnostics = true,
             disable_signature = true,
-            codelens = { enable = true }
-        },
+            codelens = { enable = true } },
     }
 ```
 
 </details>
 
-<details>
-    <summary>Notes</summary>
-
 ## NodeTree
 
-As of now, the `NodeTree` filetype which renders a tree structure is a direct
-lua rewrite of Martin Pilia's `vim-yggdrasil`. At some point in the future I
-will rewrite the logic to utilize more lua-ecosystem features and make it
-a general purpose Tree browser.
+The `NodeTree` filetype renders the tree structure returned by ccls hierarchy queries. It is a Lua rewrite of Martin Pilia's `vim-yggdrasil`. The code structure is:
 
-For now, it works exactly as intended but is not easy read. The code structure is as follows.
-
-- `ccls/provider.lua` contains functions to make LSP results compatible with
-  NodeTree.
-- `ccls/tree` Folder has the luafied `yggdrasil` tree code
-  - `ccls/tree/tree.lua` has the Tree class.
-  - `ccls/tree/node.lua` has the node class reduced to a single node generator call
-    to avoid caching problems. Will be modularized when I rewrite the logic.
-  - `ccls/tree/utils.lua` has other function calls not part of `tree` or `node` class but necessary
+- `ccls/provider.lua` — adapts LSP results into a NodeTree-compatible format
+- `ccls/tree/tree.lua` — Tree class
+- `ccls/tree/node.lua` — node constructor and rendering logic
 
 ## TODO
 
 ### Preview
 
-Open a floating preview window for node under the cursor from Sidebar
+Open a floating preview window for the node under cursor from the sidebar.
 
 ### Tests
 
-This will take some time. Need to figure out how to run a language server for testing.
-I will look through other plugins to see how they handle it. No promise on time.
-
-</details>
+Need to figure out how to run a language server in a test environment. Will look through other plugins for prior art.
 
 ## Credits
 
-- [MaskRay](https://github.com/MaskRay) Thank you for creating the LSP!
-- [vim-ccls](https://github.com/m-pilia/vim-ccls) for inspiration and speicifc ideas on translating LSP data into tree-like structure.
-- [vim-yggdrasil](https://github.com/m-pilia/vim-yggdrasil) The entire tree-browser part of the code is a lua rewrite of this plugin.
+- [MaskRay](https://github.com/MaskRay) — thank you for creating the LSP!
+- [vim-ccls](https://github.com/m-pilia/vim-ccls) — inspiration and ideas for translating LSP data into tree structure.
+- [vim-yggdrasil](https://github.com/m-pilia/vim-yggdrasil) — the entire tree-browser part of the code is a Lua rewrite of this plugin.

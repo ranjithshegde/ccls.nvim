@@ -1,13 +1,5 @@
 local protocol = {}
 
-local default_config = {
-    name = "ccls",
-    cmd = { "ccls" },
-    filetypes = { "c", "cpp", "objc", "objcpp" },
-    offset_encoding = "utf-32",
-    single_file_support = false,
-}
-
 local config_aug = vim.api.nvim_create_augroup("ccls_lsp_setup", { clear = true })
 
 local function disable_capabilities(rules)
@@ -43,18 +35,6 @@ local function set_nil_handlers(config, handles)
     end
 end
 
-local function set_root_dir(type)
-    if type ~= "lspconfig" then
-        default_config.root_dir =
-            vim.fs.dirname(vim.fs.find({ "compile_commands.json", "compile_flags.txt", ".git" }, { upward = true })[1])
-    else
-        default_config.root_dir = function(fname)
-            return require("lspconfig.util").root_pattern("compile_commands.json", "compile_flags.txt", ".git")(fname)
-                or require("lspconfig.util").find_git_ancestor(fname)
-        end
-    end
-end
-
 local function enable_codelens(events)
     local codelens_aug = vim.api.nvim_create_augroup("ccls_codelens", { clear = true })
 
@@ -66,10 +46,12 @@ local function enable_codelens(events)
                 vim.api.nvim_create_autocmd(events, {
                     group = codelens_aug,
                     buffer = args.buf,
-                    callback = vim.lsp.codelens.refresh,
+                    callback = function()
+                        vim.lsp.codelens.enable(true)
+                    end,
                     desc = "Refresh ccls codelens",
                 })
-                vim.lsp.codelens.refresh()
+                vim.lsp.codelens.enable(true)
             end
         end,
         desc = "Create codelens autocmd on Lsp Attach",
@@ -88,9 +70,8 @@ local function enable_codelens(events)
 end
 
 local function qfRequest(params, method, bufnr, name)
-    local util = require "lspconfig.util"
-    bufnr = util.validate_bufnr(bufnr)
-    local client = util.get_active_client_by_name(bufnr, "ccls")
+    bufnr = bufnr == 0 and vim.api.nvim_get_current_buf() or bufnr
+    local client = vim.lsp.get_clients({ name = "ccls", bufnr = bufnr })[1]
 
     if client then
         local function handler(_, result, ctx, _)
@@ -106,7 +87,7 @@ local function qfRequest(params, method, bufnr, name)
             end
         end
 
-        client.request(method, params, handler, bufnr)
+        client:request(method, params, handler, bufnr)
     else
         vim.notify("Ccls is not attached to this buffer", vim.log.levels.WARN, { title = "ccls.nvim" })
     end
@@ -116,6 +97,7 @@ end
 local function handle_tree(bufnr, method, extra_params, view, data)
     if type(data) ~= "table" then
         vim.notify("No hierarchy for the object under the cursor", nil, { title = "ccls.nvim" })
+        return
     end
 
     local win_config = require("ccls").win_config
@@ -123,37 +105,33 @@ local function handle_tree(bufnr, method, extra_params, view, data)
     local p = require("ccls.provider"):create(data, method, bufnr, extra_params)
     local float_buf
 
-    if view and view.type and view.type == "float" then
-        local float_id = vim.api.nvim_open_win(vim.api.nvim_create_buf(false, true), true, win_config.float)
-        float_buf = vim.api.nvim_win_get_buf(float_id)
-        vim.fn.win_gotoid(float_id)
+    local is_float = view and view.type and view.type == "float"
+    local cfg = is_float and win_config.float
+        or {
+            split = win_config.sidebar.position,
+            width = win_config.sidebar.size,
+        }
 
+    local win_id = vim.api.nvim_open_win(vim.api.nvim_create_buf(false, true), true, cfg)
+    float_buf = vim.api.nvim_win_get_buf(win_id)
+
+    if is_float then
         vim.api.nvim_create_autocmd("WinLeave", {
             buffer = float_buf,
             group = au,
             callback = function()
-                vim.api.nvim_win_close(float_id, true)
+                vim.api.nvim_win_close(win_id, true)
             end,
             once = true,
         })
-    else
-        vim.api.nvim_exec(
-            win_config.sidebar.position .. " " .. win_config.sidebar.size .. win_config.sidebar.split,
-            false
-        )
-        local new_buf = vim.api.nvim_get_current_buf()
-        if new_buf ~= bufnr then
-            float_buf = new_buf
-        end
     end
 
     require("ccls.tree").init(p, float_buf)
 end
 
 function protocol.nodeRequest(bufnr, method, params, handler)
-    local util = require "lspconfig.util"
-    bufnr = util.validate_bufnr(bufnr)
-    local client = util.get_active_client_by_name(bufnr, "ccls")
+    bufnr = bufnr == 0 and vim.api.nvim_get_current_buf() or bufnr
+    local client = vim.lsp.get_clients({ name = "ccls", bufnr = bufnr })[1]
 
     local lspHandler = function(err, result, _, _)
         if err or not result then
@@ -198,47 +176,55 @@ function protocol.request(method, config, hierarchy, view)
     end
 end
 
-function protocol.setup_lsp(type, config)
+function protocol.navigate(direction)
+    local bufnr = vim.api.nvim_get_current_buf()
+    local cursor = vim.fn.getcurpos()
+    local params = {
+        textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+        position = {
+            line = cursor[2] - 1,
+            character = cursor[3] - 1,
+        },
+        direction = direction,
+    }
+
+    local client = vim.lsp.get_clients({ name = "ccls", bufnr = bufnr })[1]
+    if not client then
+        vim.notify("Ccls is not attached to this buffer", vim.log.levels.WARN, { title = "ccls.nvim" })
+        return
+    end
+
+    client:request("$ccls/navigate", params, function(err, result)
+        if err or not result then
+            vim.notify("No navigate result", vim.log.levels.WARN, { title = "ccls.nvim" })
+            return
+        end
+        local location = vim.islist(result) and result[1] or result
+        if not location then
+            return
+        end
+        vim.lsp.util.show_document(location, client.offset_encoding, { reuse_win = true, focus = true })
+    end, bufnr)
+end
+
+function protocol.setup_lsp(config)
     local utils = require "ccls.tree.utils"
     local lsp_config = require("ccls").lsp
-
-    if not config or not config.root_dir then
-        set_root_dir(type)
-    end
 
     if lsp_config.codelens.enable then
         enable_codelens(lsp_config.codelens.events)
     end
 
-    if utils.assert_table(config) then
-        default_config = vim.tbl_extend("force", default_config, config)
-    else
-        require("lspconfig").ccls.setup(default_config)
-        return
-    end
-
     if utils.assert_table(lsp_config.disable_capabilities) then
-        default_config.on_init = disable_capabilities(lsp_config.disable_capabilities)
+        config.on_init = disable_capabilities(lsp_config.disable_capabilities)
     end
 
     if utils.assert_table(lsp_config.nil_handlers) then
-        set_nil_handlers(default_config, lsp_config.nil_handlers)
+        set_nil_handlers(config, lsp_config.nil_handlers)
     end
 
-    if type == "lspconfig" then
-        require("lspconfig").ccls.setup(default_config)
-        return
-    end
-
-    if type == "server" then
-        vim.api.nvim_create_autocmd("FileType", {
-            pattern = default_config.filetypes or { "c", "cpp", "objc", "objcpp" },
-            group = vim.api.nvim_create_augroup("ccls_config", { clear = true }),
-            callback = function()
-                vim.lsp.start(default_config)
-            end,
-        })
-    end
+    vim.lsp.config("ccls", config)
+    vim.lsp.enable("ccls", true)
 end
 
 return protocol
